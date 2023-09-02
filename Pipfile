@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pandas = "*"
+streamlit = "*"
+matplotlib = "*"
+seaborn = "*"
+wordcloud = "*"
+numpy = "*"
+joblib = "*"
+scikit-learn = "*"
+scikit-surprise = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"
