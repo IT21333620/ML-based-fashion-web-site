@@ -30,7 +30,7 @@ def main():
         """
     st.markdown(html_temp.format('royalblue', 'white'), unsafe_allow_html=True)
 
-    menu = ["Home", "SignUp", "Login", "View Items", "Cart", "Suggestions"]
+    menu = ["Home", "SignUp", "Login"]
     choice = st.sidebar.selectbox("Menu", menu)
 
 
@@ -84,17 +84,46 @@ def main():
                     if user_type == "User":
                         st.subheader("Logged In")
                         st.success("Logged In as User :: {}".format(username))
-                        st.write("This is only visible to user")
+                        task = st.selectbox("Welcome,Choose what to do",['Market place','Cart','Smart Suggestions'])
+
+                        if task == "Market place":
+                             st.write("This is marketplace")
+
+
+                        elif task == "Cart":
+                             st.write("This is cart")
+
+
+                        if task == "Smart Suggestions":
+                             st.write("This is ml suggestions")
+
 
 
 
                     elif user_type == "Admin":
                         st.subheader("Logged In")
                         st.success("Logged In as Admin :: {}".format(username))
-                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item'])
+                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Forcasts'])
 
                         if task == "Add Item":
                              st.write("Add Desired Item")
+
+
+                        elif task == "View Added Item":
+                             st.write("View added item")
+
+
+                        elif task == "Update Item":
+                             st.write("Update items")
+
+
+                        elif task == "Delete Item":
+                             st.write("Delete items")
+
+
+                        elif task == "Forcasts":
+                             st.write("View sales forcasts")
+                             
 
                     else:
                         st.error("Unknown user type")
@@ -104,18 +133,6 @@ def main():
                 st.error("Login failed. Please check your credentials.")
 
         
-        
-
-    elif choice == "Cart":
-        st.subheader("Your cart")
-
-    elif choice == "View Items":
-        st.subheader("Items for Sale")
-        
-        
-
-    elif choice == "Suggestions":
-        st.subheader("Smart Suggestions")
 
 if __name__ == '__main__':
     main()
