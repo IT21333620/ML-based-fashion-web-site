@@ -11,10 +11,15 @@ from db_fxns import *
 
 # Security
 # passlib, hashlib, bcrypt, scrypt
+import hashlib
+def make_hashes(password):
+	return hashlib.sha256(str.encode(password)).hexdigest()
 
-# Reading Time
+def check_hashes(password,hashed_text):
+	if make_hashes(password) == hashed_text:
+		return hashed_text
+	return False
 
-# Layout Templates
 
 def main():
     """A Simple CRUD Blog"""
@@ -27,6 +32,7 @@ def main():
 
     menu = ["Home", "SignUp", "Login", "View Items", "Cart", "Suggestions"]
     choice = st.sidebar.selectbox("Menu", menu)
+
 
     if choice == "Home":
         st.subheader("Home")
@@ -51,10 +57,14 @@ def main():
         new_gender = st.selectbox("Gender",['Male','Female'])
         new_user = st.text_input("User name")
         new_password = st.text_input("Password", type='password')
+        new_usertype = st.selectbox("Type", ['User'], key="usertype_selectbox",disabled=True)
+
 
         if st.button("Signup"):
-            st.success("Account created")
-		
+            create_usertable()
+            add_userdata(new_name,new_age,new_gender,new_user,make_hashes(new_password),new_usertype)
+            st.success("Account created sucessfully")
+            
 
     elif choice == "View Items":
         st.subheader("Items for Sale")
