@@ -67,7 +67,6 @@ def main():
             
 
     elif choice == "Login":
-        st.subheader("Logged In")
 
         username = st.sidebar.text_input("Username", key='user_username')
         password = st.sidebar.text_input("Password", type='password', key='user_password')
@@ -79,19 +78,32 @@ def main():
             result = login_user(username,check_hashes(password,hashed_pwd))
 
             if result:
-                 st.success("Logged In As User :: {}".format(username))
-        
-        Ausername = st.sidebar.text_input("Username", key='admin_username')
-        Apassword = st.sidebar.text_input("Password", type='password', key='admin_password')
+                user_type = get_user_type(username)
+                if user_type:
 
-        if st.sidebar.checkbox("Admin Login"):
-            hashed_pwd = make_hashes(Apassword)
-        
-        
-            result = login_user(Ausername,check_hashes(Apassword,hashed_pwd))
+                    if user_type == "User":
+                        st.subheader("Logged In")
+                        st.success("Logged In as User :: {}".format(username))
+                        st.write("This is only visible to user")
 
-            if result:
-                 st.success("Logged In As Admin :: {}".format(Ausername))
+
+
+                    elif user_type == "Admin":
+                        st.subheader("Logged In")
+                        st.success("Logged In as Admin :: {}".format(username))
+                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item'])
+
+                        if task == "Add Item":
+                             st.write("Add Desired Item")
+
+                    else:
+                        st.error("Unknown user type")
+                else:
+                    st.error("Failed to retrieve user type")
+            else:
+                st.error("Login failed. Please check your credentials.")
+
+        
         
 
     elif choice == "Cart":
