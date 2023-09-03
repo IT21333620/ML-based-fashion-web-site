@@ -63,3 +63,11 @@ def view_all_users():
 	c.execute('SELECT * FROM userstable')
 	data = c.fetchall()
 	return data
+
+def get_user_type(username):
+    c.execute('SELECT usertype FROM userstable WHERE username = ?', (username,))
+    user_type = c.fetchone()
+    if user_type:
+        return user_type[0]
+    else:
+        return None
