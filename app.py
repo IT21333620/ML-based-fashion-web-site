@@ -20,9 +20,6 @@ def check_hashes(password,hashed_text):
 		return hashed_text
 	return False
 
-# Reading Time
-
-# Layout Templates
 
 def main():
     """A Simple CRUD Blog"""
