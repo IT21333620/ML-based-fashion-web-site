@@ -30,9 +30,8 @@ def main():
         """
     st.markdown(html_temp.format('royalblue', 'white'), unsafe_allow_html=True)
 
-    menu = ["Home", "SignUp", "Login", "View Items", "Cart", "Suggestions"]
+    menu = ["Home", "SignUp", "Login"]
     choice = st.sidebar.selectbox("Menu", menu)
-
 
     if choice == "Home":
         st.subheader("Home")
@@ -67,7 +66,6 @@ def main():
             
 
     elif choice == "Login":
-        st.subheader("Logged In")
 
         username = st.sidebar.text_input("Username", key='user_username')
         password = st.sidebar.text_input("Password", type='password', key='user_password')
@@ -79,31 +77,60 @@ def main():
             result = login_user(username,check_hashes(password,hashed_pwd))
 
             if result:
-                 st.success("Logged In As User :: {}".format(username))
-        
-        Ausername = st.sidebar.text_input("Username", key='admin_username')
-        Apassword = st.sidebar.text_input("Password", type='password', key='admin_password')
+                user_type = get_user_type(username)
+                if user_type:
 
-        if st.sidebar.checkbox("Admin Login"):
-            hashed_pwd = make_hashes(Apassword)
-        
-        
-            result = login_user(Ausername,check_hashes(Apassword,hashed_pwd))
+                    if user_type == "User":
+                        st.subheader("Logged In")
+                        st.success("Logged In as User :: {}".format(username))
+                        task = st.selectbox("Welcome,Choose what to do",['Market place','Cart','Smart Suggestions'])
 
-            if result:
-                 st.success("Logged In As Admin :: {}".format(Ausername))
-        
+                        if task == "Market place":
+                             st.write("This is marketplace")
 
-    elif choice == "Cart":
-        st.subheader("Your cart")
 
-    elif choice == "View Items":
-        st.subheader("Items for Sale")
-        
-        
+                        elif task == "Cart":
+                             st.write("This is cart")
 
-    elif choice == "Suggestions":
-        st.subheader("Smart Suggestions")
+
+                        if task == "Smart Suggestions":
+                             st.write("This is ml suggestions")
+
+
+
+
+                    elif user_type == "Admin":
+                        st.subheader("Logged In")
+                        st.success("Logged In as Admin :: {}".format(username))
+                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Forcasts'])
+
+                        if task == "Add Item":
+                             st.write("Add Desired Item")
+
+
+                        elif task == "View Added Item":
+                             st.write("View added item")
+
+
+                        elif task == "Update Item":
+                             st.write("Update items")
+
+
+                        elif task == "Delete Item":
+                             st.write("Delete items")
+
+
+                        elif task == "Forcasts":
+                             st.write("View sales forcasts")
+                             
+
+                    else:
+                        st.error("Unknown user type")
+                else:
+                    st.error("Failed to retrieve user type")
+            else:
+                st.error("Login failed. Please check your credentials.")
+
         
 
 if __name__ == '__main__':
