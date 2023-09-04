@@ -162,6 +162,58 @@ def main():
                         elif task == "Update Item":
                              st.subheader("Update items")
 
+                             result = view_all_items()
+                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             with st.expander("Current Data"):
+                                st.dataframe(df)
+
+                             list_of_item = [i[0] for i in view_unique_item()]
+                             selected_item = st.selectbox("Items to Edit",list_of_item)
+
+                             selected_result = get_item(selected_item)
+
+                             if selected_result:
+                                  get_category = selected_result[0][0]
+                                  get_subcategory = selected_result[0][1]
+                                  get_name = selected_result[0][2]
+                                  get_price = selected_result[0][3]
+                                  get_discount = selected_result[0][4]
+                                  get_isnew = selected_result[0][6]
+                                  get_brand = selected_result[0][7]
+                                  get_colour1 = selected_result[0][8]
+                                  get_colour2 = selected_result[0][9]
+                                  get_url = selected_result[0][10]
+
+                             col1,col2 = st.columns(2)
+
+                             with col1:
+                                  newitem_category = st.selectbox(get_category,['Men','Women'])
+                                  newitem_sub_category = st.text_input("Sub category",get_subcategory)
+                                  newitem_name = st.text_input("Item Name",get_name)
+                                  newitem_price = st.number_input("Item Price",get_price)
+                                  newitem_discount = st.slider("Item Discount", 0.0, 100.0, get_discount)
+
+                             with col2:
+                                  newitem_isnew = st.selectbox(get_isnew,['True','False'])
+                                  newitem_brand = st.text_input("Item Brand",get_brand)
+                                  newitem_color_varient_1 = st.text_input("Colour Varient 1",get_colour1)
+                                  newitem_color_varient_2 = st.text_input("Colour Varient 2",get_colour2)
+                                  newitem_image = st.text_area("Image Link",get_url)
+
+                             if st.button("Update Task"):
+                                edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_isnew,newitem_brand,
+			                                newitem_color_varient_1,newitem_color_varient_2,newitem_image,get_category,get_subcategory,get_name,get_price,
+			                                get_discount,get_isnew,get_brand,get_colour1,get_colour2,get_url)
+                                st.success("Sucessfully Updated {}".format(newitem_name))
+
+                             result2 = view_all_items()
+                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             with st.expander("Updated Data"):
+                                st.dataframe(df2)
+
+                             
+
+
 
                         elif task == "Delete Item":
                              st.subheader("Delete items")
