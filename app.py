@@ -11,10 +11,15 @@ from db_fxns import *
 
 # Security
 # passlib, hashlib, bcrypt, scrypt
+import hashlib
+def make_hashes(password):
+	return hashlib.sha256(str.encode(password)).hexdigest()
 
-# Reading Time
+def check_hashes(password,hashed_text):
+	if make_hashes(password) == hashed_text:
+		return hashed_text
+	return False
 
-# Layout Templates
 
 def main():
     """A Simple CRUD Blog"""
@@ -27,6 +32,7 @@ def main():
 
     menu = ["Home", "SignUp", "Login", "View Items", "Cart", "Suggestions"]
     choice = st.sidebar.selectbox("Menu", menu)
+
 
     if choice == "Home":
         st.subheader("Home")
@@ -51,29 +57,54 @@ def main():
         new_gender = st.selectbox("Gender",['Male','Female'])
         new_user = st.text_input("User name")
         new_password = st.text_input("Password", type='password')
+        new_usertype = st.selectbox("Type", ['User'], key="usertype_selectbox",disabled=True)
+
 
         if st.button("Signup"):
-            st.success("Account created")
-		
+            create_usertable()
+            add_userdata(new_name,new_age,new_gender,new_user,make_hashes(new_password),new_usertype)
+            st.success("Account created sucessfully")
+            
 
-    elif choice == "View Items":
-        st.subheader("Items for Sale")
+    elif choice == "Login":
+        st.subheader("Logged In")
+
+        username = st.sidebar.text_input("Username", key='user_username')
+        password = st.sidebar.text_input("Password", type='password', key='user_password')
+
+        if st.sidebar.checkbox("User Login"):
+            hashed_pwd = make_hashes(password)
+        
+        
+            result = login_user(username,check_hashes(password,hashed_pwd))
+
+            if result:
+                 st.success("Logged In As User :: {}".format(username))
+        
+        Ausername = st.sidebar.text_input("Username", key='admin_username')
+        Apassword = st.sidebar.text_input("Password", type='password', key='admin_password')
+
+        if st.sidebar.checkbox("Admin Login"):
+            hashed_pwd = make_hashes(Apassword)
+        
+        
+            result = login_user(Ausername,check_hashes(Apassword,hashed_pwd))
+
+            if result:
+                 st.success("Logged In As Admin :: {}".format(Ausername))
+        
 
     elif choice == "Cart":
         st.subheader("Your cart")
 
-    elif choice == "Login":
-        st.subheader("Logged In")
-        st.sidebar.text("Login as User")
-        username = st.sidebar.text_input("Username",key='user_username')
-        password = st.sidebar.text_input("Password", type='password',key='user_password')
-
-        st.sidebar.text("Login as Admin")
-        Ausername = st.sidebar.text_input("Username",key='admin_username')
-        Apassword = st.sidebar.text_input("Password", type='password',key='admin_password')
+    elif choice == "View Items":
+        st.subheader("Items for Sale")
+        
+        
 
     elif choice == "Suggestions":
         st.subheader("Smart Suggestions")
+        
 
 if __name__ == '__main__':
     main()
