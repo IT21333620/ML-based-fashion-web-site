@@ -87,15 +87,15 @@ def main():
                         task = st.selectbox("Welcome,Choose what to do",['Market place','Cart','Smart Suggestions'])
 
                         if task == "Market place":
-                             st.write("This is marketplace")
+                             st.subheader("This is marketplace")
 
 
                         elif task == "Cart":
-                             st.write("This is cart")
+                             st.subheader("This is cart")
 
 
                         if task == "Smart Suggestions":
-                             st.write("This is ml suggestions")
+                             st.subheader("This is ml suggestions")
 
 
 
@@ -106,23 +106,69 @@ def main():
                         task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Forcasts'])
 
                         if task == "Add Item":
-                             st.write("Add Desired Item")
+                             st.subheader("Add Desired Item")
+
+                             col1,col2 = st.columns(2)
+
+                             with col1:
+                                  item_category = st.selectbox("Choose category",['Men','Women'])
+                                  item_sub_category = st.text_input("Sub category")
+                                  item_name = st.text_input("Item Name")
+                                  item_price = st.number_input("Item Price",min_value=1.0)
+                                  item_discount = st.slider("Item Discount",min_value=0.0,max_value=100.0)
+
+                             with col2:
+                                  item_brand = st.text_input("Item Brand")
+                                  item_color_varient_1 = st.text_input("Colour Varient 1")
+                                  item_color_varient_2 = st.text_input("Colour Varient 2")
+                                  item_image = st.text_area("Image Link")
+                            
+                             if st.button("Add Item"):
+                                  create_item_table()
+                                  add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,
+                                                0,"True",item_brand,item_color_varient_1,item_color_varient_2,item_image)
+                                  st.success("Item {}'s {} added sucessfully".format(item_category,item_sub_category))
+                             
+
 
 
                         elif task == "View Added Item":
-                             st.write("View added item")
+                             st.subheader("View added item")
+                             item_data = view_all_items()
+                             df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             
+                             num_items = len(df)
+                             items_per_row = 4
+
+                             for start_index in range(0, num_items, items_per_row):
+                                end_index = min(start_index + items_per_row, num_items)
+                                items_in_current_row = df[start_index:end_index]
+
+                                cols = st.columns(4)
+
+                                for index, row in items_in_current_row.iterrows():
+                                    with cols[index % 4]:
+                                        caption_text = f"{row['category']} - {row['subcategory']} - {row['name']}"
+                                        st.image(row['image_url'], caption=caption_text, use_column_width=True)
+
+
+
+
+
+
+
 
 
                         elif task == "Update Item":
-                             st.write("Update items")
+                             st.subheader("Update items")
 
 
                         elif task == "Delete Item":
-                             st.write("Delete items")
+                             st.subheader("Delete items")
 
 
                         elif task == "Forcasts":
-                             st.write("View sales forcasts")
+                             st.subheader("View sales forcasts")
                              
 
                     else:
