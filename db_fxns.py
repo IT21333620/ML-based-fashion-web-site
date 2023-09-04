@@ -5,15 +5,16 @@ c = conn.cursor()
 
 # Functions
 
-def create_table():
-	c.execute('CREATE TABLE IF NOT EXISTS blogtable(author TEXT,title TEXT,article TEXT,postdate DATE)')
+def create_item_table():
+	c.execute('CREATE TABLE IF NOT EXISTS itemstable(category TEXT,subcategory TEXT,name TEXT,price INTEGER,discount INTEGER,likes INTEGER,isnew TEXT,brand TEXT,colour1 TEXT,colour2 TEXT,photo TEXT)')
 
-def add_data(author,title,article,postdate):
-	c.execute('INSERT INTO blogtable(author,title,article,postdate) VALUES (?,?,?,?)',(author,title,article,postdate))
+def add_item_data(category,subcategory,name,price,discount,likes,isnew,brand,colour1,colour2,photo):
+	c.execute('INSERT INTO itemstable(category,subcategory,name,price,discount,likes,isnew,brand,colour1,colour2,photo) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+		   (category,subcategory,name,price,discount,likes,isnew,brand,colour1,colour2,photo))
 	conn.commit()
 
-def view_all_notes():
-	c.execute('SELECT * FROM blogtable')
+def view_all_items():
+	c.execute('SELECT * FROM itemstable')
 	data = c.fetchall()
 	return data
 
