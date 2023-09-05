@@ -152,12 +152,28 @@ def main():
                             max_price = st.slider("Maximum Price $", mens_df["current_price"].min(), mens_df["current_price"].max(), mens_df["current_price"].mean())
                             min_discount = st.number_input("Minimum Discount Rate (%)", value = round(mens_df["discount"].mean(), 2), format="%f")
 
-
-                            
                             recommendations = get_recommendations(item_name, max_price, min_discount)
                             st.write(recommendations)
-                            st.subheader("Recommended Items")
+                            suggestion_type = st.radio("Select Suggestion type",["Item Base","User Base"])
 
+                            if suggestion_type == "Item Base":
+                                st.write("Item based")
+                                orderitem = view_cart()
+                                if orderitem:
+                                    selectItem = st.selectbox("Match to", orderitem)
+                                else:
+                                    st.write("No items in the cart.") 
+
+
+                            elif suggestion_type == "User Base":
+                                st.write("User based")
+                            else:
+                                st.write("Error.")
+
+
+
+                            st.subheader("Recommended Items")
+                            
                             recommend_count = len(recommendations)
                             no_of_col = 4
                             nno_of_rows = (recommend_count + no_of_col - 1) // no_of_col
