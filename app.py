@@ -14,6 +14,7 @@ if 'session_state' not in st.session_state:
 
 # DB
 from db_fxns import *
+from db_cart import *
 
 # Security
 # passlib, hashlib, bcrypt, scrypt
@@ -92,11 +93,142 @@ def main():
                         task = st.selectbox("Welcome, Choose what to do",['Market place','Cart','Smart Suggestions'])
 
                         if task == "Market place":
-                             st.write("This is marketplace")
+                            st.subheader("This is marketplace")
+                            task1 = st.selectbox("Select Category", ["Women's", "Men's", "Children's"])
+                            if task1 == "Women's":
+                                df = pd.read_csv("women.csv")
+                                st.subheader("Women's Clothing")
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price,quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
+
+                            elif task1 == "Men's":
+                                df = pd.read_csv("men.csv")
+                                st.subheader("Men's Clothing")
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
+
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price,quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
+
+                            elif task1 == "Children's":
+                                df = pd.read_csv("kids.csv")
+                                st.subheader("Men's Clothing")
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
+
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price, quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
 
 
                         elif task == "Cart":
-                             st.write("This is cart")
+                            st.subheader("This is cart")
+                            
+                            # Call the view_all_items() function to retrieve cart items
+                            cart_items = view_all_items(username)
+                            # Display the cart items in a table
+                            if cart_items:
+                                cart_df = pd.DataFrame(cart_items, columns=["Username", "Item Name", "Category" ,"Total Price", "Quantity"])
+                                st.write("**Cart Items:**")
+                                st.dataframe(cart_df)
+                            else:
+                                st.write("Your cart is empty.")
+
+
+                            # Optionally, add a button to clear the cart
+                            if st.button('Clear Cart'):
+                                delete_cart(username)
+                                st.success("Your cart has been cleared.")
+                                st.experimental_rerun()
+
+
+
 
 
                         if task == "Smart Suggestions":
@@ -233,23 +365,121 @@ def main():
                         task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Forcasts'])
 
                         if task == "Add Item":
-                             st.write("Add Desired Item")
+                             st.subheader("Add Desired Item")
+
+                             col1,col2 = st.columns(2)
+
+                             with col1:
+                                  item_category = st.selectbox("Choose category",['Men','Women'])
+                                  item_sub_category = st.text_input("Sub category")
+                                  item_name = st.text_input("Item Name")
+                                  item_price = st.number_input("Item Price",min_value=1.0)
+                                  item_discount = st.slider("Item Discount",min_value=0.0,max_value=100.0)
+
+                             with col2:
+                                  item_brand = st.text_input("Item Brand")
+                                  item_color_varient_1 = st.text_input("Colour Varient 1")
+                                  item_color_varient_2 = st.text_input("Colour Varient 2")
+                                  item_image = st.text_area("Image Link")
+                            
+                             if st.button("Add Item"):
+                                  create_item_table()
+                                  add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,
+                                                0,"True",item_brand,item_color_varient_1,item_color_varient_2,item_image)
+                                  st.success("Item {}'s {} added sucessfully".format(item_category,item_sub_category))
+                             
+
 
 
                         elif task == "View Added Item":
-                             st.write("View added item")
+                             st.subheader("View added item")
+                             item_data = view_all_items()
+                             df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             
+                             num_items = len(df)
+                             items_per_row = 4
+
+                             for start_index in range(0, num_items, items_per_row):
+                                end_index = min(start_index + items_per_row, num_items)
+                                items_in_current_row = df[start_index:end_index]
+
+                                cols = st.columns(4)
+
+                                for index, row in items_in_current_row.iterrows():
+                                    with cols[index % 4]:
+                                        caption_text = f"{row['category']} - {row['subcategory']} - {row['name']}"
+                                        st.image(row['image_url'], caption=caption_text, use_column_width=True)
+
+
+
+
+
+
+
 
 
                         elif task == "Update Item":
-                             st.write("Update items")
+                             st.subheader("Update items")
+
+                             result = view_all_items()
+                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             with st.expander("Current Data"):
+                                st.dataframe(df)
+
+                             list_of_item = [i[0] for i in view_unique_item()]
+                             selected_item = st.selectbox("Items to Edit",list_of_item)
+
+                             selected_result = get_item(selected_item)
+
+                             if selected_result:
+                                  get_category = selected_result[0][0]
+                                  get_subcategory = selected_result[0][1]
+                                  get_name = selected_result[0][2]
+                                  get_price = selected_result[0][3]
+                                  get_discount = selected_result[0][4]
+                                  get_isnew = selected_result[0][6]
+                                  get_brand = selected_result[0][7]
+                                  get_colour1 = selected_result[0][8]
+                                  get_colour2 = selected_result[0][9]
+                                  get_url = selected_result[0][10]
+
+                             col1,col2 = st.columns(2)
+
+                             with col1:
+                                  newitem_category = st.selectbox(get_category,['Men','Women'])
+                                  newitem_sub_category = st.text_input("Sub category",get_subcategory)
+                                  newitem_name = st.text_input("Item Name",get_name)
+                                  newitem_price = st.number_input("Item Price",get_price)
+                                  newitem_discount = st.slider("Item Discount", 0.0, 100.0, get_discount)
+
+                             with col2:
+                                  newitem_isnew = st.selectbox(get_isnew,['True','False'])
+                                  newitem_brand = st.text_input("Item Brand",get_brand)
+                                  newitem_color_varient_1 = st.text_input("Colour Varient 1",get_colour1)
+                                  newitem_color_varient_2 = st.text_input("Colour Varient 2",get_colour2)
+                                  newitem_image = st.text_area("Image Link",get_url)
+
+                             if st.button("Update Task"):
+                                edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_isnew,newitem_brand,
+			                                newitem_color_varient_1,newitem_color_varient_2,newitem_image,get_category,get_subcategory,get_name,get_price,
+			                                get_discount,get_isnew,get_brand,get_colour1,get_colour2,get_url)
+                                st.success("Sucessfully Updated {}".format(newitem_name))
+
+                             result2 = view_all_items()
+                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             with st.expander("Updated Data"):
+                                st.dataframe(df2)
+
+                             
+
 
 
                         elif task == "Delete Item":
-                             st.write("Delete items")
+                             st.subheader("Delete items")
 
 
                         elif task == "Forcasts":
-                             st.write("View sales forcasts")
+                             st.subheader("View sales forcasts")
                              
 
                     else:
