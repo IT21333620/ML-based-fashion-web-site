@@ -5,9 +5,16 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+
+if 'session_state' not in st.session_state:
+    st.session_state.session_state = {}
 
 # DB
 from db_fxns import *
+from db_cart import *
 
 # Security
 # passlib, hashlib, bcrypt, scrypt
@@ -32,7 +39,6 @@ def main():
 
     menu = ["Home", "SignUp", "Login"]
     choice = st.sidebar.selectbox("Menu", menu)
-
 
     if choice == "Home":
         st.subheader("Home")
@@ -83,22 +89,275 @@ def main():
 
                     if user_type == "User":
                         st.subheader("Logged In")
-                        st.success("Logged In as User :: {}".format(username))
-                        task = st.selectbox("Welcome,Choose what to do",['Market place','Cart','Smart Suggestions'])
+                        
+                        task = st.selectbox("Welcome, Choose what to do",['Market place','Cart','Smart Suggestions'])
 
                         if task == "Market place":
-                             st.subheader("This is marketplace")
+                            st.subheader("This is marketplace")
+                            task1 = st.selectbox("Select Category", ["Women's", "Men's", "Children's"])
+                            if task1 == "Women's":
+                                df = pd.read_csv("women.csv")
+                                st.subheader("Women's Clothing")
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price,quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
+
+                            elif task1 == "Men's":
+                                df = pd.read_csv("men.csv")
+                                st.subheader("Men's Clothing")
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
+
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price,quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
+
+                            elif task1 == "Children's":
+                                df = pd.read_csv("kids.csv")
+                                st.subheader("Men's Clothing")
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
+
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price, quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
 
 
                         elif task == "Cart":
-                             st.subheader("This is cart")
+                            st.subheader("This is cart")
+                            
+                            # Call the view_all_items() function to retrieve cart items
+                            cart_items = view_all_items(username)
+                            # Display the cart items in a table
+                            if cart_items:
+                                cart_df = pd.DataFrame(cart_items, columns=["Username", "Item Name", "Category" ,"Total Price", "Quantity"])
+                                st.write("**Cart Items:**")
+                                st.dataframe(cart_df)
+                            else:
+                                st.write("Your cart is empty.")
+
+
+                            # Optionally, add a button to clear the cart
+                            if st.button('Clear Cart'):
+                                delete_cart(username)
+                                st.success("Your cart has been cleared.")
+                                st.experimental_rerun()
+
+
+
 
 
                         if task == "Smart Suggestions":
-                             st.subheader("This is ml suggestions")
+                            df = pd.read_csv("data/men.csv")
+                            
+
+                            columns_to_display = ["subcategory", "name", "current_price", "discount", "likes_count", "is_new", "brand", "variation_0_color", "variation_1_color","variation_0_image"]
+                            mens_df = df[columns_to_display].fillna("")
+
+                            mens_df['content'] = mens_df['subcategory'] + " " + mens_df['brand'] + " " + mens_df['variation_0_color'] + " " + mens_df['variation_1_color'] 
+
+                            tfidf_vectorizer = TfidfVectorizer(stop_words='english')
+                            tfidf_matrix = tfidf_vectorizer.fit_transform(mens_df['content'])
+
+                            # Compute cosine similarity between items
+                            cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
+
+                            def get_recommendations(item_name, max_price, min_discount, cosine_sim_matrix=cosine_sim):
+                                item_indices = []
+                                for idx, name in mens_df[['name']].iterrows():
+                                    if name['name'] == item_name:
+                                        item_indices.append(idx)
+                                
+                                if not item_indices:
+                                    return "Item not found in the dataset"
+                                
+                                idx = item_indices[0]
+                                sim_scores = list(enumerate(cosine_sim_matrix[idx]))
+                                sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+                                
+                                # Filter recommendations based on price and discount constraints
+                                filtered_indices = []
+                                for i in range(1, len(sim_scores)):
+                                    rec_idx = sim_scores[i][0]
+                                    rec_price = mens_df.loc[rec_idx, "current_price"]
+                                    rec_discount = mens_df.loc[rec_idx, "discount"]
+                                    if rec_price <= max_price and rec_discount >= min_discount:
+                                        filtered_indices.append(rec_idx)
+                                    if len(filtered_indices) >= 10:
+                                        break
+                                
+                                # Create a DataFrame with recommended items and selected attributes
+                                recommendations_df = mens_df.loc[filtered_indices, ["name","current_price","brand","variation_0_color","variation_1_color","variation_0_image"]]
+                                return recommendations_df
+
+
+                            
+
+                            item_name = "Pantalon homme 100% coton anti-rides Longueur"
+
+                            st.title("Suggestions")
+                            st.subheader("Add Constrains")
+                            max_price = st.slider("Maximum Price $", mens_df["current_price"].min(), mens_df["current_price"].max(), mens_df["current_price"].mean())
+                            min_discount = st.number_input("Minimum Discount Rate (%)", value = round(mens_df["discount"].mean(), 2), format="%f")
+
+                            recommendations = get_recommendations(item_name, max_price, min_discount)
+                            st.write(recommendations)
+                            suggestion_type = st.radio("Select Suggestion type",["Item Base","User Base"])
+
+                            if suggestion_type == "Item Base":
+                                st.write("Item based")
+                                orderitem = view_cart()
+                                if orderitem:
+                                    selectItem = st.selectbox("Match to", orderitem)
+                                else:
+                                    st.write("No items in the cart.") 
+
+
+                            elif suggestion_type == "User Base":
+                                st.write("User based")
+                            else:
+                                st.write("Error.")
 
 
 
+                            st.subheader("Recommended Items")
+                            
+                            recommend_count = len(recommendations)
+                            no_of_col = 4
+                            nno_of_rows = (recommend_count + no_of_col - 1) // no_of_col
+
+                            for i in range(0, recommend_count, no_of_col):
+                                j = min(i + no_of_col, recommend_count)
+                                items_in_row = recommendations[i:j]  # Use recommendations DataFrame instead of df
+
+                                cols = st.columns(no_of_col)
+                                for col_index, row in enumerate(items_in_row.iterrows()):
+                                    with cols[col_index]:
+                                        st.image(
+                                            row[1]['variation_0_image'],  # Access the row data using row[1]
+                                            caption=f"{row[1]['name']}",  # Access the row data using row[1]
+                                            use_column_width=True
+                                        )
+
+                                        key = row[1]['name']
+
+                                        if st.button(f"View", key=key):
+                                            # Store the selected item's information in the session_state
+                                            st.session_state.session_state['selected_item'] = {
+                                                'name': row[1]['name'],
+                                                'image': row[1]['variation_0_image'],
+                                                'price': row[1]['current_price'],
+                                                'brand':row[1]['brand'],
+                                                'color1':row[1]['variation_0_color'],
+                                                'color2':row[1]['variation_1_color']   
+                                                
+                                            }
+
+                            st.header("Selected Item Details")
+
+                            # Check if any item details have been saved in session_state
+                            if 'selected_item' in st.session_state.session_state:
+                                selected_item = st.session_state.session_state['selected_item']
+                                col1, col2 = st.columns([2, 3])  
+                               
+                                col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
+
+                                col2.markdown(f"**<span style='color: blue; font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
+                                col2.markdown(f"<span style='color: blue; font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
+                                col2.markdown(f"<span style='color: blue; font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
+                                col2.markdown(f"<span style='color: blue; font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
+                                
+                            else:
+                                st.write("No item selected. Click 'View' on an item to see its details.")
+                        
+                            #convert data types
+
+
+                             
 
                     elif user_type == "Admin":
                         st.subheader("Logged In")
