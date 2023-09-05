@@ -8,6 +8,7 @@ from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 
 # DB
 from db_fxns import *
+from db_cart import *
 
 # Security
 # passlib, hashlib, bcrypt, scrypt
@@ -87,7 +88,134 @@ def main():
                         task = st.selectbox("Welcome,Choose what to do",['Market place','Cart','Smart Suggestions'])
 
                         if task == "Market place":
-                             st.subheader("This is marketplace")
+                            st.subheader("This is marketplace")
+                            task1 = st.selectbox("Select Category", ["Women's", "Men's", "Children's"])
+                            if task1 == "Women's":
+                                df = pd.read_csv("women.csv")
+                                st.subheader("Women's Clothing")
+
+                                # Optionally, add a button to clear the cart
+                                if st.button('Clear Cart'):
+                                    # Clear the cart table in the database
+                                    c.execute("DELETE FROM cart")
+                                    conn.commit()
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (item_name, price, quantity) VALUES (?, ?, ?)", (row['name'], row['current_price'], quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
+
+                            elif task1 == "Men's":
+                                df = pd.read_csv("men.csv")
+                                st.subheader("Men's Clothing")
+
+                                # Optionally, add a button to clear the cart
+                                if st.button('Clear Cart'):
+                                    # Clear the cart table in the database
+                                    c.execute("DELETE FROM cart")
+                                    conn.commit()
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (item_name, price, quantity) VALUES (?, ?, ?)", (row['name'], row['current_price'], quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
+
+                            elif task1 == "Children's":
+                                df = pd.read_csv("kids.csv")
+                                st.subheader("Men's Clothing")
+
+                                # Optionally, add a button to clear the cart
+                                if st.button('Clear Cart'):
+                                    # Clear the cart table in the database
+                                    c.execute("DELETE FROM cart")
+                                    conn.commit()
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (item_name, price, quantity) VALUES (?, ?, ?)", (row['name'], row['current_price'], quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
 
 
                         elif task == "Cart":
