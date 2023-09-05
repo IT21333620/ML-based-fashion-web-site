@@ -99,12 +99,6 @@ def main():
                                 df = pd.read_csv("women.csv")
                                 st.subheader("Women's Clothing")
 
-                                # Optionally, add a button to clear the cart
-                                if st.button('Clear Cart'):
-                                    # Clear the cart table in the database
-                                    c.execute("DELETE FROM cart")
-                                    conn.commit()
-
                                 # Display the dataset with images in rows of four items each
                                 st.write('**Products:**')
 
@@ -127,12 +121,12 @@ def main():
 
                                             # Add an input field for quantity
                                             quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
-
+                                            total_price = row['current_price'] * quantity
                                             # Add the "Add to Cart" button inside a custom container div
                                             with st.container():
                                                 if st.button(f'Add to Cart', key=f'add_button_{index}'):
                                                     create_cart_table()
-                                                    c.execute("INSERT INTO cart (item_name, price, quantity) VALUES (?, ?, ?)", (row['name'], row['current_price'], quantity))
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price,quantity))
                                                     conn.commit()
                                                 st.write("")
                                                 st.write("")
@@ -142,12 +136,6 @@ def main():
                                 df = pd.read_csv("men.csv")
                                 st.subheader("Men's Clothing")
 
-                                # Optionally, add a button to clear the cart
-                                if st.button('Clear Cart'):
-                                    # Clear the cart table in the database
-                                    c.execute("DELETE FROM cart")
-                                    conn.commit()
-
                                 # Display the dataset with images in rows of four items each
                                 st.write('**Products:**')
 
@@ -169,12 +157,13 @@ def main():
 
                                             # Add an input field for quantity
                                             quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
 
                                             # Add the "Add to Cart" button inside a custom container div
                                             with st.container():
                                                 if st.button(f'Add to Cart', key=f'add_button_{index}'):
                                                     create_cart_table()
-                                                    c.execute("INSERT INTO cart (item_name, price, quantity) VALUES (?, ?, ?)", (row['name'], row['current_price'], quantity))
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price,quantity))
                                                     conn.commit()
                                                 st.write("")
                                                 st.write("")
@@ -184,12 +173,6 @@ def main():
                                 df = pd.read_csv("kids.csv")
                                 st.subheader("Men's Clothing")
 
-                                # Optionally, add a button to clear the cart
-                                if st.button('Clear Cart'):
-                                    # Clear the cart table in the database
-                                    c.execute("DELETE FROM cart")
-                                    conn.commit()
-
                                 # Display the dataset with images in rows of four items each
                                 st.write('**Products:**')
 
@@ -211,12 +194,13 @@ def main():
 
                                             # Add an input field for quantity
                                             quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
 
                                             # Add the "Add to Cart" button inside a custom container div
                                             with st.container():
                                                 if st.button(f'Add to Cart', key=f'add_button_{index}'):
                                                     create_cart_table()
-                                                    c.execute("INSERT INTO cart (item_name, price, quantity) VALUES (?, ?, ?)", (row['name'], row['current_price'], quantity))
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price, quantity))
                                                     conn.commit()
                                                 st.write("")
                                                 st.write("")
@@ -224,7 +208,27 @@ def main():
 
 
                         elif task == "Cart":
-                             st.subheader("This is cart")
+                            st.subheader("This is cart")
+                            
+                            # Call the view_all_items() function to retrieve cart items
+                            cart_items = view_all_items(username)
+                            # Display the cart items in a table
+                            if cart_items:
+                                cart_df = pd.DataFrame(cart_items, columns=["Username", "Item Name", "Category" ,"Total Price", "Quantity"])
+                                st.write("**Cart Items:**")
+                                st.dataframe(cart_df)
+                            else:
+                                st.write("Your cart is empty.")
+
+
+                            # Optionally, add a button to clear the cart
+                            if st.button('Clear Cart'):
+                                delete_cart(username)
+                                st.success("Your cart has been cleared.")
+                                st.experimental_rerun()
+
+
+
 
 
                         if task == "Smart Suggestions":
