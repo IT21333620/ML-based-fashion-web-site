@@ -393,7 +393,7 @@ def main():
 
                         elif task == "View Added Item":
                              st.subheader("View added item")
-                             item_data = view_all_items()
+                             item_data = view_all_inventry_items()
                              df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              
                              num_items = len(df)
@@ -421,7 +421,7 @@ def main():
                         elif task == "Update Item":
                              st.subheader("Update items")
 
-                             result = view_all_items()
+                             result = view_all_inventry_items()
                              df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("Current Data"):
                                 st.dataframe(df)
@@ -459,13 +459,13 @@ def main():
                                   newitem_color_varient_2 = st.text_input("Colour Varient 2",get_colour2)
                                   newitem_image = st.text_area("Image Link",get_url)
 
-                             if st.button("Update Task"):
+                             if st.button("Update Item"):
                                 edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_isnew,newitem_brand,
 			                                newitem_color_varient_1,newitem_color_varient_2,newitem_image,get_category,get_subcategory,get_name,get_price,
 			                                get_discount,get_isnew,get_brand,get_colour1,get_colour2,get_url)
                                 st.success("Sucessfully Updated {}".format(newitem_name))
 
-                             result2 = view_all_items()
+                             result2 = view_all_inventry_items()
                              df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("Updated Data"):
                                 st.dataframe(df2)
@@ -476,6 +476,25 @@ def main():
 
                         elif task == "Delete Item":
                              st.subheader("Delete items")
+
+                             result = view_all_inventry_items()
+                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             with st.expander("Current Data"):
+                                st.dataframe(df)
+
+                             list_of_item = [i[0] for i in view_unique_item()]
+
+                             selected_item = st.selectbox("Items to Delete",list_of_item)
+
+                             st.warning("Do you want to delete {} ".format(selected_item))
+                             if st.button("Delete Task"):
+                                delete_item(selected_item)
+                                st.success("Task has been sucessfully deleted")
+
+                             result2 = view_all_inventry_items()
+                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             with st.expander("New Data"):
+                                st.dataframe(df2)
 
 
                         elif task == "Forcasts":
