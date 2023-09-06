@@ -13,7 +13,7 @@ def add_item_data(category,subcategory,name,price,discount,likes,isnew,brand,col
 		   (category,subcategory,name,price,discount,likes,isnew,brand,colour1,colour2,photo))
 	conn.commit()
 
-def view_all_items():
+def view_all_inventry_items():
 	c.execute('SELECT * FROM itemstable')
 	data = c.fetchall()
 	return data
@@ -39,8 +39,8 @@ def edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,n
     data = c.fetchall()
     return data
 
-def delete_data(title):
-	c.execute('DELETE FROM blogtable WHERE title="{}"'.format(title))
+def delete_item(name):
+	c.execute('DELETE FROM itemstable WHERE name="{}"'.format(name))
 	conn.commit()
 
 
