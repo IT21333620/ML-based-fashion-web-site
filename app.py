@@ -219,9 +219,6 @@ def main():
                                 st.experimental_rerun()
 
 
-
-
-
                         if task == "Smart Suggestions":
                             #########################################################################
                             st.title("Suggestions")
@@ -434,6 +431,7 @@ def main():
                                     with cols[index % 4]:
                                         caption_text = f"{row['category']} - {row['subcategory']} - {row['name']}"
                                         st.image(row['image_url'], caption=caption_text, use_column_width=True)
+
 
 
 
