@@ -16,7 +16,3 @@ def view_cart():
     c.execute("Select item_name FROM cart ")
     items = c.fetchall()
     return items
-
-def delete_cart(title):
-    c.execute("DELETE FROM cart")
-    conn.commit()
