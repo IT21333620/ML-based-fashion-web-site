@@ -12,8 +12,12 @@ from sklearn.metrics.pairwise import linear_kernel
 if 'session_state' not in st.session_state:
     st.session_state.session_state = {}
 
+#global variables 
+global df_sugg
+
 # DB
 from db_fxns import *
+from db_cart import *
 
 # Security
 # passlib, hashlib, bcrypt, scrypt
@@ -92,75 +96,252 @@ def main():
                         task = st.selectbox("Welcome, Choose what to do",['Market place','Cart','Smart Suggestions'])
 
                         if task == "Market place":
-                             st.write("This is marketplace")
+                            st.subheader("This is marketplace")
+                            task1 = st.selectbox("Select Category", ["Women's", "Men's", "Children's"])
+                            if task1 == "Women's":
+                                df = pd.read_csv("women.csv")
+                                st.subheader("Women's Clothing")
+
+                                # Display the dataset with images in rows of four items each
+                                st.write('**Products:**')
+
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    # Create a Streamlit row to display items in a horizontal line
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
+                                            # Display the price below the image
+                                            st.write(f"Price: ${row['current_price']:.2f}")
+
+
+                                            # Add an input field for quantity
+                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
+                                            total_price = row['current_price'] * quantity
+                                            # Add the "Add to Cart" button inside a custom container div
+                                            with st.container():
+                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
+                                                    create_cart_table()
+                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price,quantity))
+                                                    conn.commit()
+                                                st.write("")
+                                                st.write("")
+                                                st.write("")
+
+                            elif task1 == "Men's":
+                                df = pd.read_csv("data/men.csv")
+                                # Remove rows with null values in the specified columns
+                                df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
+
+                                substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
+
+                                # Use boolean indexing to filter out rows containing the substring
+                                df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
+
+                                page_size = 24
+                                page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
+
+                                # Calculate the start and end indices for the current page
+                                start_index = (page_number - 1) * page_size
+                                end_index = start_index + page_size
+
+                                # Slice the dataset for the current page
+                                current_page_df = df[start_index:end_index]
+
+                                # Display the dataset with images for the current page
+                                st.subheader("Men's Clothing")
+                                st.write('**Products (Page {}):**'.format(page_number))
+
+                                # Create a Streamlit row to display items in a horizontal line
+                                cols = st.columns(4)
+
+                                  
+                                min_image_height = 10 
+
+                                for index, row in enumerate(current_page_df.iterrows()):
+                                    row_index, row_data = row  # Unpack the row data
+                                    with cols[index % 4]:
+                                        st.image(row_data['image_url'], 
+                                            caption=row_data['name'][:28] + '...' if len(row_data['name']) > 28 else row_data['name'], 
+                                            use_column_width=True ,  # Maintain column width
+                                            output_format='JPEG')
+
+                                    
+                                        st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
+
+                                        # Display the price below the image
+                                        st.write(f"Price: ${row_data['current_price']:.2f}")
+
+                                        # Add an input field for quantity
+                                        quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
+                                        total_price = row_data['current_price'] * quantity
+
+                                        # Add the "Add to Cart" button inside a custom container div
+                                        with st.container():
+                                            if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
+                                                create_cart_table()
+                                                c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row_data['name'], row_data['current_price'], total_price, quantity))
+                                                conn.commit()
+                                            st.write("")
+                                            st.write("")
+                                            st.write("")
+
+                                # Create a "Load More" button to fetch the next page
+                                if end_index < len(df):
+                                    st.sidebar.button("Load More")
 
 
                         elif task == "Cart":
-                             st.write("This is cart")
+                            st.subheader("This is cart")
+                            
+                            # Call the view_all_items() function to retrieve cart items
+                            cart_items = view_all_items(username)
+                            # Display the cart items in a table
+                            if cart_items:
+                                cart_df = pd.DataFrame(cart_items, columns=["Username", "Item Name", "Category" ,"Total Price", "Quantity"])
+                                st.write("**Cart Items:**")
+                                st.dataframe(cart_df)
+                            else:
+                                st.write("Your cart is empty.")
+
+
+                            # Optionally, add a button to clear the cart
+                            if st.button('Clear Cart'):
+                                delete_cart(username)
+                                st.success("Your cart has been cleared.")
+                                st.experimental_rerun()
+
+
+
 
 
                         if task == "Smart Suggestions":
-                            df = pd.read_csv("data/men.csv")
-                            
-
-                            columns_to_display = ["subcategory", "name", "current_price", "discount", "likes_count", "is_new", "brand", "variation_0_color", "variation_1_color","variation_0_image"]
-                            mens_df = df[columns_to_display].fillna("")
-
-                            mens_df['content'] = mens_df['subcategory'] + " " + mens_df['brand'] + " " + mens_df['variation_0_color'] + " " + mens_df['variation_1_color'] 
-
-                            tfidf_vectorizer = TfidfVectorizer(stop_words='english')
-                            tfidf_matrix = tfidf_vectorizer.fit_transform(mens_df['content'])
-
-                            # Compute cosine similarity between items
-                            cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
-
-                            def get_recommendations(item_name, max_price, min_discount, cosine_sim_matrix=cosine_sim):
-                                item_indices = []
-                                for idx, name in mens_df[['name']].iterrows():
-                                    if name['name'] == item_name:
-                                        item_indices.append(idx)
-                                
-                                if not item_indices:
-                                    return "Item not found in the dataset"
-                                
-                                idx = item_indices[0]
-                                sim_scores = list(enumerate(cosine_sim_matrix[idx]))
-                                sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-                                
-                                # Filter recommendations based on price and discount constraints
-                                filtered_indices = []
-                                for i in range(1, len(sim_scores)):
-                                    rec_idx = sim_scores[i][0]
-                                    rec_price = mens_df.loc[rec_idx, "current_price"]
-                                    rec_discount = mens_df.loc[rec_idx, "discount"]
-                                    if rec_price <= max_price and rec_discount >= min_discount:
-                                        filtered_indices.append(rec_idx)
-                                    if len(filtered_indices) >= 10:
-                                        break
-                                
-                                # Create a DataFrame with recommended items and selected attributes
-                                recommendations_df = mens_df.loc[filtered_indices, ["name","current_price","brand","variation_0_color","variation_1_color","variation_0_image"]]
-                                return recommendations_df
-
-
-                            
-
-                            item_name = "Pantalon homme 100% coton anti-rides Longueur"
-
+                            #########################################################################
                             st.title("Suggestions")
-                            st.subheader("Add Constrains")
-                            max_price = st.slider("Maximum Price $", mens_df["current_price"].min(), mens_df["current_price"].max(), mens_df["current_price"].mean())
-                            min_discount = st.number_input("Minimum Discount Rate (%)", value = round(mens_df["discount"].mean(), 2), format="%f")
+                            sugg_intro = """
+                                <div style="background: linear-gradient(to bottom right, #FFA500, #FF6347); color: #000; padding: 20px; border-radius: 10px; font-weight: bolder;">
+                                    <p>This is a feature that allows users to get their preferred clothing without seaming the whole website. You can get suggestions from an item that
+                                      is in your cart or based on your past purchases. User-based suggestions will suggest an item that may not be similar, but you may have an interest 
+                                      but item-based suggestions will give you similar items. You are free to find your favorite cloth by this feature..</p>
+                                </div>
+                            """
 
-                            recommendations = get_recommendations(item_name, max_price, min_discount)
-                            st.write(recommendations)
+                            st.markdown(sugg_intro,unsafe_allow_html=True)
+                           
                             suggestion_type = st.radio("Select Suggestion type",["Item Base","User Base"])
 
                             if suggestion_type == "Item Base":
                                 st.write("Item based")
-                                orderitem = view_cart()
+                                orderitem = view_cart(username)
                                 if orderitem:
-                                    selectItem = st.selectbox("Match to", orderitem)
+                                    item_name = st.selectbox("Match to", orderitem)
+                                    dataset_type = viewCatogory(item_name)
+                                    cleaned_string = dataset_type[0][0].strip("[]()")
+                                    
+
+                                    
+                                    if cleaned_string =="Men's":
+                                        df_sugg = pd.read_csv("data/men.csv")
+                                    elif cleaned_string =="Women's":
+                                        df_sugg = pd.read_csv("data/women.csv")
+                                    elif cleaned_string =="Children's":
+                                        df_sugg = pd.read_csv("data/kids.csv")
+                                    
+                                    item_cloumn = df_sugg[df_sugg['name']== item_name]
+
+                                    if not item_cloumn.empty:
+                                        item_cart = item_cloumn.iloc[0]['variation_0_image']
+                                        st.write(f'<div style="display: flex; justify-content: center;"><img src="{item_cart}" width="300"></div>', unsafe_allow_html=True)
+
+                                    #Remove un nessory cloumns from the data set 
+                                    columns_to_display = ["subcategory", "name", "current_price", "discount", "likes_count", "is_new", "brand", "variation_0_color", "variation_1_color","variation_0_image"]
+                                    item_df = df_sugg[columns_to_display].fillna("")
+
+                                 
+
+
+                                    item_df['content'] = item_df['subcategory'] + " " + item_df['brand'] + " " + item_df['variation_0_color'] + " " + item_df['variation_1_color'] 
+
+                                    tfidf_vectorizer = TfidfVectorizer(stop_words='english')
+                                    tfidf_matrix = tfidf_vectorizer.fit_transform(item_df['content'])
+
+                                    # Compute cosine similarity between items
+                                    cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
+
+                                    def get_recommendations(item_name, max_price, min_discount, cosine_sim_matrix=cosine_sim):
+                                        item_indices = []
+                                        for idx, name in item_df[['name']].iterrows():
+                                            if name['name'] == item_name:
+                                                item_indices.append(idx)
+                                        
+                                        if not item_indices:
+                                            return "Item not found in the dataset"
+                                        
+                                        idx = item_indices[0]
+                                        sim_scores = list(enumerate(cosine_sim_matrix[idx]))
+                                        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+                                        
+                                        # Filter recommendations based on price and discount constraints
+                                        filtered_indices = []
+                                        for i in range(1, len(sim_scores)):
+                                            rec_idx = sim_scores[i][0]
+                                            rec_price = item_df.loc[rec_idx, "current_price"]
+                                            rec_discount = item_df.loc[rec_idx, "discount"]
+                                            if rec_price <= max_price and rec_discount >= min_discount:
+                                                filtered_indices.append(rec_idx)
+                                            if len(filtered_indices) >= 10:
+                                                break
+                                        
+                                        # Create a DataFrame with recommended items and selected attributes
+                                        recommendations_df = item_df.loc[filtered_indices, ["name","current_price","brand","variation_0_color","variation_1_color","variation_0_image"]]
+                                        return recommendations_df
+                                    
+
+                                    st.subheader("Add Constrains")
+                                    max_price = st.slider("Maximum Price $", item_df["current_price"].min(), item_df["current_price"].max(), item_df["current_price"].mean())
+                                    min_discount = st.number_input("Minimum Discount Rate (%)", value = round(item_df["discount"].mean(), 2), format="%f")
+
+                                    recommendations = get_recommendations(item_name, max_price, min_discount)
+                                    st.subheader("Recommended Items")
+                            
+                                    recommend_count = len(recommendations)
+                                    no_of_col = 4
+
+                                    for i in range(0, recommend_count, no_of_col):
+                                        j = min(i + no_of_col, recommend_count)
+                                        items_in_row = recommendations[i:j]  # Use recommendations DataFrame instead of df
+
+                                        cols = st.columns(no_of_col)
+                                        for col_index, row in enumerate(items_in_row.iterrows()):
+                                            with cols[col_index]:
+                                                st.image(
+                                                    row[1]['variation_0_image'],  # Access the row data using row[1]
+                                                    caption=f"{row[1]['name'][:37] + '...' if len(row[1]['name']) > 15 else row[1]['name']}",  # Access the row data using row[1]
+                                                    
+                                                    use_column_width=True
+                                                )
+
+                                                key = row[1]['name']
+
+                                                if st.button(f"View", key=key):
+                                                    # Store the selected item's information in the session_state
+                                                    st.session_state.session_state['selected_item'] = {
+                                                        'name': row[1]['name'],
+                                                        'image': row[1]['variation_0_image'],
+                                                        'price': row[1]['current_price'],
+                                                        'brand':row[1]['brand'],
+                                                        'color1':row[1]['variation_0_color'],
+                                                        'color2':row[1]['variation_1_color']   
+                                                        
+                                                    }
+
                                 else:
                                     st.write("No items in the cart.") 
 
@@ -171,39 +352,8 @@ def main():
                                 st.write("Error.")
 
 
-
-                            st.subheader("Recommended Items")
                             
-                            recommend_count = len(recommendations)
-                            no_of_col = 4
-                            nno_of_rows = (recommend_count + no_of_col - 1) // no_of_col
-
-                            for i in range(0, recommend_count, no_of_col):
-                                j = min(i + no_of_col, recommend_count)
-                                items_in_row = recommendations[i:j]  # Use recommendations DataFrame instead of df
-
-                                cols = st.columns(no_of_col)
-                                for col_index, row in enumerate(items_in_row.iterrows()):
-                                    with cols[col_index]:
-                                        st.image(
-                                            row[1]['variation_0_image'],  # Access the row data using row[1]
-                                            caption=f"{row[1]['name']}",  # Access the row data using row[1]
-                                            use_column_width=True
-                                        )
-
-                                        key = row[1]['name']
-
-                                        if st.button(f"View", key=key):
-                                            # Store the selected item's information in the session_state
-                                            st.session_state.session_state['selected_item'] = {
-                                                'name': row[1]['name'],
-                                                'image': row[1]['variation_0_image'],
-                                                'price': row[1]['current_price'],
-                                                'brand':row[1]['brand'],
-                                                'color1':row[1]['variation_0_color'],
-                                                'color2':row[1]['variation_1_color']   
-                                                
-                                            }
+                            
 
                             st.header("Selected Item Details")
 
@@ -214,10 +364,17 @@ def main():
                                
                                 col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
 
-                                col2.markdown(f"**<span style='color: blue; font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style='color: blue; font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style='color: blue; font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style='color: blue; font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
+                                col2.markdown(f"**<span style=' font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
+                                col2.markdown(f"<span style=' font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
+                                col2.markdown(f"<span style=' font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
+                                col2.markdown(f"<span style=' font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
+                                col2.markdown(f"<span style='margin: 40px;'>  </span>" , unsafe_allow_html=True)
+                                quantity = col2.number_input('Quantity', min_value=1, value=1, )
+                                total_price = selected_item['price'] * quantity
+                               
+                                if col2.button("Add to cart"):
+                                    add_item_cart(username,cleaned_string,selected_item['name'],selected_item['price'],total_price,quantity )
+
                                 
                             else:
                                 st.write("No item selected. Click 'View' on an item to see its details.")
@@ -233,23 +390,115 @@ def main():
                         task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Forcasts'])
 
                         if task == "Add Item":
-                             st.write("Add Desired Item")
+                             st.subheader("Add Desired Item")
+
+                             col1,col2 = st.columns(2)
+
+                             with col1:
+                                  item_category = st.selectbox("Choose category",['Men','Women'])
+                                  item_sub_category = st.text_input("Sub category")
+                                  item_name = st.text_input("Item Name")
+                                  item_price = st.number_input("Item Price",min_value=1.0)
+                                  item_discount = st.slider("Item Discount",min_value=0.0,max_value=100.0)
+
+                             with col2:
+                                  item_brand = st.text_input("Item Brand")
+                                  item_color_varient_1 = st.text_input("Colour Varient 1")
+                                  item_color_varient_2 = st.text_input("Colour Varient 2")
+                                  item_image = st.text_area("Image Link")
+                            
+                             if st.button("Add Item"):
+                                  create_item_table()
+                                  add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,
+                                                0,"True",item_brand,item_color_varient_1,item_color_varient_2,item_image)
+                                  st.success("Item {}'s {} added sucessfully".format(item_category,item_sub_category))
+                             
+
 
 
                         elif task == "View Added Item":
-                             st.write("View added item")
+                             st.subheader("View added item")
+                             item_data = view_all_items()
+                             df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             
+                             num_items = len(df)
+                             items_per_row = 4
+
+                             for start_index in range(0, num_items, items_per_row):
+                                end_index = min(start_index + items_per_row, num_items)
+                                items_in_current_row = df[start_index:end_index]
+
+                                cols = st.columns(4)
+
+                                for index, row in items_in_current_row.iterrows():
+                                    with cols[index % 4]:
+                                        caption_text = f"{row['category']} - {row['subcategory']} - {row['name']}"
+                                        st.image(row['image_url'], caption=caption_text, use_column_width=True)
+
 
 
                         elif task == "Update Item":
-                             st.write("Update items")
+                             st.subheader("Update items")
+
+                             result = view_all_items()
+                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             with st.expander("Current Data"):
+                                st.dataframe(df)
+
+                             list_of_item = [i[0] for i in view_unique_item()]
+                             selected_item = st.selectbox("Items to Edit",list_of_item)
+
+                             selected_result = get_item(selected_item)
+
+                             if selected_result:
+                                  get_category = selected_result[0][0]
+                                  get_subcategory = selected_result[0][1]
+                                  get_name = selected_result[0][2]
+                                  get_price = selected_result[0][3]
+                                  get_discount = selected_result[0][4]
+                                  get_isnew = selected_result[0][6]
+                                  get_brand = selected_result[0][7]
+                                  get_colour1 = selected_result[0][8]
+                                  get_colour2 = selected_result[0][9]
+                                  get_url = selected_result[0][10]
+
+                             col1,col2 = st.columns(2)
+
+                             with col1:
+                                  newitem_category = st.selectbox(get_category,['Men','Women'])
+                                  newitem_sub_category = st.text_input("Sub category",get_subcategory)
+                                  newitem_name = st.text_input("Item Name",get_name)
+                                  newitem_price = st.number_input("Item Price",get_price)
+                                  newitem_discount = st.slider("Item Discount", 0.0, 100.0, get_discount)
+
+                             with col2:
+                                  newitem_isnew = st.selectbox(get_isnew,['True','False'])
+                                  newitem_brand = st.text_input("Item Brand",get_brand)
+                                  newitem_color_varient_1 = st.text_input("Colour Varient 1",get_colour1)
+                                  newitem_color_varient_2 = st.text_input("Colour Varient 2",get_colour2)
+                                  newitem_image = st.text_area("Image Link",get_url)
+
+                             if st.button("Update Task"):
+                                edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_isnew,newitem_brand,
+			                                newitem_color_varient_1,newitem_color_varient_2,newitem_image,get_category,get_subcategory,get_name,get_price,
+			                                get_discount,get_isnew,get_brand,get_colour1,get_colour2,get_url)
+                                st.success("Sucessfully Updated {}".format(newitem_name))
+
+                             result2 = view_all_items()
+                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             with st.expander("Updated Data"):
+                                st.dataframe(df2)
+
+                             
+
 
 
                         elif task == "Delete Item":
-                             st.write("Delete items")
+                             st.subheader("Delete items")
 
 
                         elif task == "Forcasts":
-                             st.write("View sales forcasts")
+                             st.subheader("View sales forcasts")
                              
 
                     else:

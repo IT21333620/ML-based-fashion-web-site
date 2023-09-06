@@ -5,34 +5,39 @@ c = conn.cursor()
 
 # Functions
 
-def create_table():
-	c.execute('CREATE TABLE IF NOT EXISTS blogtable(author TEXT,title TEXT,article TEXT,postdate DATE)')
+def create_item_table():
+	c.execute('CREATE TABLE IF NOT EXISTS itemstable(category TEXT,subcategory TEXT,name TEXT,price INTEGER,discount INTEGER,likes INTEGER,isnew TEXT,brand TEXT,colour1 TEXT,colour2 TEXT,photo TEXT)')
 
-def add_data(author,title,article,postdate):
-	c.execute('INSERT INTO blogtable(author,title,article,postdate) VALUES (?,?,?,?)',(author,title,article,postdate))
+def add_item_data(category,subcategory,name,price,discount,likes,isnew,brand,colour1,colour2,photo):
+	c.execute('INSERT INTO itemstable(category,subcategory,name,price,discount,likes,isnew,brand,colour1,colour2,photo) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+		   (category,subcategory,name,price,discount,likes,isnew,brand,colour1,colour2,photo))
 	conn.commit()
 
-def view_all_notes():
-	c.execute('SELECT * FROM blogtable')
+def view_all_items():
+	c.execute('SELECT * FROM itemstable')
 	data = c.fetchall()
 	return data
 
-def view_all_titles():
-	c.execute('SELECT DISTINCT title FROM blogtable')
-	data = c.fetchall()
-	return data
+def view_unique_item():
+    c.execute('SELECT DISTINCT name FROM itemstable')
+    data = c.fetchall()
+    return data
 
+def get_item(name):
+    c.execute('SELECT * FROM itemstable WHERE name = "{}" '.format(name))
+    data = c.fetchall()
+    return data
 
-def get_blog_by_title(title):
-	c.execute('SELECT * FROM blogtable WHERE title="{}"'.format(title))
-	data = c.fetchall()
-	return data
-
-def get_blog_by_author(author):
-	c.execute('SELECT * FROM blogtable WHERE author="{}"'.format(author))
-	data = c.fetchall()
-	return data
-
+def edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_isnew,newitem_brand,
+			  newitem_color_varient_1,newitem_color_varient_2,newitem_image,get_category,get_subcategory,get_name,get_price,
+			  get_discount,get_isnew,get_brand,get_colour1,get_colour2,get_url):
+    c.execute('UPDATE itemstable SET category=?,subcategory=?,name=?,price=?,discount=?,likes=0,isnew=?,brand=?,colour1=?,colour2=?,photo=?  WHERE category=? AND subcategory=? and name=? AND price=? AND discount=? AND likes=0 AND isnew=? AND brand=? AND colour1=? AND colour2=? and photo=?',
+			  (newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_isnew,newitem_brand,
+			  newitem_color_varient_1,newitem_color_varient_2,newitem_image,get_category,get_subcategory,get_name,get_price,
+			  get_discount,get_isnew,get_brand,get_colour1,get_colour2,get_url))
+    conn.commit()
+    data = c.fetchall()
+    return data
 
 def delete_data(title):
 	c.execute('DELETE FROM blogtable WHERE title="{}"'.format(title))
