@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
-from datetime import datetime
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
@@ -94,7 +93,7 @@ def main():
                     if user_type == "User":
                         st.subheader("Logged In")
                         
-                        task = st.selectbox("Welcome, Choose what to do",['Market place','Cart','View Purchase History','Smart Suggestions'])
+                        task = st.selectbox("Welcome, Choose what to do",['Market place','Cart','Smart Suggestions'])
 
                         if task == "Market place":
                             st.subheader("This is marketplace")
@@ -296,62 +295,15 @@ def main():
                                 cart_df = pd.DataFrame(cart_items, columns=["Username", "Item Name", "Category" ,"Total Price", "Quantity"])
                                 st.write("**Cart Items:**")
                                 st.dataframe(cart_df)
-
-                                #Calculate and display the subtotal
-                                subtotal = calculate_cart_subtotal(username)
-                                st.write(f"**Subtotal:** ${subtotal:.2f}")
                             else:
                                 st.write("Your cart is empty.")
 
-                            with st.form('Payment Detalis'):
-                                account_number = st.text_input('Account Number')
-                                col1, col2 = st.columns(2)  # Create two columns here
-                                with col1:
-                                    expiration_month = st.selectbox('Experation Date', range(1, 13))
-                                with col2:
-                                    expiration_year = st.selectbox('Experation Month', range(2023, 2030))
-                                cvv = st.number_input('cvv')
-
-                                # Add a button to make the purchase
-                                if st.form_submit_button('Make Purchase'):
-                                    
-                                    purchase_date = datetime.today().strftime('%Y-%m-%d')
-                                    add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
-                                    st.success("Your purchase has been completed.")
-                                    # Clear the form fields after successful submission
-                                    account_number, expiration_month, expiration_year, cvv = '', None, None, None
-
-                                    if make_purchase(username):
-                                        add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
-                                        conn.commit()
-
-
-                                        st.success("Your purchase has been completed.")
-                                        # st.experimental_rerun()  # Refresh the page to reflect the updated cart
-                                    else:
-                                        st.warning("Your cart is empty. Add items to your cart before making a purchase.")
 
                             # Optionally, add a button to clear the cart
                             if st.button('Clear Cart'):
                                 delete_cart(username)
                                 st.success("Your cart has been cleared.")
                                 st.experimental_rerun()
-
-                        elif task == "View Purchase History":
-                            st.subheader("View Purchase History")
-
-                            # Call the view_purchase_history function to retrieve purchase history for the user
-                            purchase_history = view_purchase_history(username)
-
-                            if purchase_history:
-                                # Convert the purchase history to a DataFrame for better display
-                                purchase_df = pd.DataFrame(purchase_history, columns=["ID", "User Name", "Category", "Item Name", "Price", "Total Price", "Quantity", "Purchase Date"])
-                                st.dataframe(purchase_df)
-
-                            else:
-                                st.write("No purchase history available for this user.")
-
-
 
 
                         if task == "Smart Suggestions":
@@ -371,7 +323,7 @@ def main():
 
                             if suggestion_type == "Item Base":
                                 st.write("Item based")
-                                orderitem = view_cart_item(username)
+                                orderitem = view_cart(username)
                                 if orderitem:
                                     item_name = st.selectbox("Match to", orderitem)
                                     dataset_type = viewCatogory(item_name)
@@ -396,7 +348,7 @@ def main():
                                     columns_to_display = ["subcategory", "name", "current_price", "discount", "likes_count", "is_new", "brand", "variation_0_color", "variation_1_color","variation_0_image"]
                                     item_df = df_sugg[columns_to_display].fillna("")
 
-                                    df_sugg = df_sugg.dropna(subset=[ "variation_0_image"])
+                                 
 
 
                                     item_df['content'] = item_df['subcategory'] + " " + item_df['brand'] + " " + item_df['variation_0_color'] + " " + item_df['variation_1_color'] 
