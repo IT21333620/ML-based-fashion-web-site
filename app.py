@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+from datetime import datetime
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
@@ -93,50 +94,137 @@ def main():
                     if user_type == "User":
                         st.subheader("Logged In")
                         
-                        task = st.selectbox("Welcome, Choose what to do",['Market place','Cart','Smart Suggestions'])
+                        task = st.selectbox("Welcome, Choose what to do",['Market place','Cart','View Purchase History','Smart Suggestions'])
 
                         if task == "Market place":
                             st.subheader("This is marketplace")
                             task1 = st.selectbox("Select Category", ["Women's", "Men's", "Children's"])
                             if task1 == "Women's":
-                                df = pd.read_csv("women.csv")
-                                st.subheader("Women's Clothing")
+                                df = pd.read_csv("data/women.csv")
+                                # Remove rows with null values in the specified columns
+                                df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
 
-                                # Display the dataset with images in rows of four items each
-                                st.write('**Products:**')
+                                substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
 
-                                num_items = len(df)
-                                items_per_row = 4
+                                # Use boolean indexing to filter out rows containing the substring
+                                df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
 
-                                for start_index in range(0, num_items, items_per_row):
-                                    end_index = min(start_index + items_per_row, num_items)
-                                    items_in_current_row = df[start_index:end_index]
+                                page_size = 24
+                                page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
 
-                                    # Create a Streamlit row to display items in a horizontal line
-                                    cols = st.columns(4)
+                                # Calculate the start and end indices for the current page
+                                start_index = (page_number - 1) * page_size
+                                end_index = start_index + page_size
 
-                                    for index, row in items_in_current_row.iterrows():
-                                        with cols[index % 4]:
-                                            st.image(row['image_url'], caption=row['name'][:15] + '...' if len(row['name']) > 15 else row['name'], use_column_width=True)
-                                            # Display the price below the image
-                                            st.write(f"Price: ${row['current_price']:.2f}")
+                                # Slice the dataset for the current page
+                                current_page_df = df[start_index:end_index]
 
+                                # Display the dataset with images for the current page
+                                st.subheader("Men's Clothing")
+                                st.write('**Products (Page {}):**'.format(page_number))
 
-                                            # Add an input field for quantity
-                                            quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{index}')
-                                            total_price = row['current_price'] * quantity
-                                            # Add the "Add to Cart" button inside a custom container div
-                                            with st.container():
-                                                if st.button(f'Add to Cart', key=f'add_button_{index}'):
-                                                    create_cart_table()
-                                                    c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row['name'], row['current_price'], total_price,quantity))
-                                                    conn.commit()
-                                                st.write("")
-                                                st.write("")
-                                                st.write("")
+                                # Create a Streamlit row to display items in a horizontal line
+                                cols = st.columns(4)
+
+                                  
+                                min_image_height = 10 
+
+                                for index, row in enumerate(current_page_df.iterrows()):
+                                    row_index, row_data = row  # Unpack the row data
+                                    with cols[index % 4]:
+                                        st.image(row_data['image_url'], 
+                                            caption=row_data['name'][:15] + '...' if len(row_data['name']) > 15 else row_data['name'], 
+                                            use_column_width=True ,  # Maintain column width
+                                            output_format='JPEG')
+
+                                    
+                                        st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
+
+                                        # Display the price below the image
+                                        st.write(f"Price: ${row_data['current_price']:.2f}")
+
+                                        # Add an input field for quantity
+                                        quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
+                                        total_price = row_data['current_price'] * quantity
+
+                                        # Add the "Add to Cart" button inside a custom container div
+                                        with st.container():
+                                            if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
+                                                create_cart_table()
+                                                c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row_data['name'], row_data['current_price'], total_price, quantity))
+                                                conn.commit()
+                                            st.write("")
+                                            st.write("")
+                                            st.write("")
+
+                                # Create a "Load More" button to fetch the next page
+                                if end_index < len(df):
+                                    st.sidebar.button("Load More")
 
                             elif task1 == "Men's":
                                 df = pd.read_csv("data/men.csv")
+                                # Remove rows with null values in the specified columns
+                                df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
+
+                                substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
+
+                                # Use boolean indexing to filter out rows containing the substring
+                                df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
+
+                                page_size = 24
+                                page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
+
+                                # Calculate the start and end indices for the current page
+                                start_index = (page_number - 1) * page_size
+                                end_index = start_index + page_size
+
+                                # Slice the dataset for the current page
+                                current_page_df = df[start_index:end_index]
+
+                                # Display the dataset with images for the current page
+                                st.subheader("Men's Clothing")
+                                st.write('**Products (Page {}):**'.format(page_number))
+
+                                # Create a Streamlit row to display items in a horizontal line
+                                cols = st.columns(4)
+
+                                  
+                                min_image_height = 10 
+
+                                for index, row in enumerate(current_page_df.iterrows()):
+                                    row_index, row_data = row  # Unpack the row data
+                                    with cols[index % 4]:
+                                        st.image(row_data['image_url'], 
+                                            caption=row_data['name'][:28] + '...' if len(row_data['name']) > 28 else row_data['name'], 
+                                            use_column_width=True ,  # Maintain column width
+                                            output_format='JPEG')
+
+                                    
+                                        st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
+
+                                        # Display the price below the image
+                                        st.write(f"Price: ${row_data['current_price']:.2f}")
+
+                                        # Add an input field for quantity
+                                        quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
+                                        total_price = row_data['current_price'] * quantity
+
+                                        # Add the "Add to Cart" button inside a custom container div
+                                        with st.container():
+                                            if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
+                                                create_cart_table()
+                                                c.execute("INSERT INTO cart (user_name, category, item_name, price, total_price, quantity) VALUES (?, ?, ?, ?, ?, ?)", (username, task1, row_data['name'], row_data['current_price'], total_price, quantity))
+                                                conn.commit()
+                                            st.write("")
+                                            st.write("")
+                                            st.write("")
+
+                                # Create a "Load More" button to fetch the next page
+                                if end_index < len(df):
+                                    st.sidebar.button("Load More")
+
+                            elif task1 == "Children's":
+                                df = pd.read_csv("data/kids.csv")
                                 # Remove rows with null values in the specified columns
                                 df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
 
@@ -208,15 +296,59 @@ def main():
                                 cart_df = pd.DataFrame(cart_items, columns=["Username", "Item Name", "Category" ,"Total Price", "Quantity"])
                                 st.write("**Cart Items:**")
                                 st.dataframe(cart_df)
+
+                                #Calculate and display the subtotal
+                                subtotal = calculate_cart_subtotal(username)
+                                st.write(f"*Subtotal:* ${subtotal:.2f}")
                             else:
                                 st.write("Your cart is empty.")
 
+                            with st.form('Payment Detalis'):
+                                account_number = st.number_input('Account Number', 0,)
+                                col1, col2 = st.columns(2)  # Create two columns here
+                                with col1:
+                                    expiration_month = st.selectbox('Experation Date', range(1, 13))
+                                with col2:
+                                    expiration_year = st.selectbox('Experation Month', range(2023, 2030))
+                                cvv = st.number_input('cvv', min_value=100)
+
+                                # Add a button to make the purchase
+                                if st.form_submit_button('Make Purchase'):
+
+                                    purchase_date = datetime.today().strftime('%Y-%m-%d')
+                                    add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
+                                    # Clear the form fields after successful submission
+                                    account_number, expiration_month, expiration_year, cvv = '', None, None, None
+
+                                    if make_purchase(username):
+                                        add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
+                                        conn.commit()
+
+
+                                        st.success("Your purchase has been completed.")
+                                        # st.experimental_rerun()  # Refresh the page to reflect the updated cart
+                                    else:
+                                        st.warning("Your cart is empty. Add items to your cart before making a purchase.")
 
                             # Optionally, add a button to clear the cart
                             if st.button('Clear Cart'):
                                 delete_cart(username)
                                 st.success("Your cart has been cleared.")
                                 st.experimental_rerun()
+
+                        elif task == "View Purchase History":
+                            st.subheader("View Purchase History")
+
+                            # Call the view_purchase_history function to retrieve purchase history for the user
+                            purchase_history = view_purchase_history(username)
+
+                            if purchase_history:
+                                # Convert the purchase history to a DataFrame for better display
+                                purchase_df = pd.DataFrame(purchase_history, columns=["ID", "User Name", "Category", "Item Name", "Price", "Total Price", "Quantity", "Purchase Date"])
+                                st.dataframe(purchase_df)
+
+                            else:
+                                st.write("No purchase history available for this user.")
 
 
                         if task == "Smart Suggestions":
@@ -236,7 +368,7 @@ def main():
 
                             if suggestion_type == "Item Base":
                                 st.write("Item based")
-                                orderitem = view_cart(username)
+                                orderitem = view_cart_item(username)
                                 if orderitem:
                                     item_name = st.selectbox("Match to", orderitem)
                                     dataset_type = viewCatogory(item_name)
@@ -262,7 +394,7 @@ def main():
                                     item_df = df_sugg[columns_to_display].fillna("")
 
                                  
-
+                                    df_sugg = df_sugg.dropna(subset=[ "variation_0_image"])
 
                                     item_df['content'] = item_df['subcategory'] + " " + item_df['brand'] + " " + item_df['variation_0_color'] + " " + item_df['variation_1_color'] 
 
