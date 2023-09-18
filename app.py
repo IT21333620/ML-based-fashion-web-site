@@ -7,12 +7,17 @@ matplotlib.use('Agg')
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 from datetime import datetime
 import time
-import pandas as pd
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
+from collections import defaultdict
+from sklearn.metrics.pairwise import cosine_similarity
 
 if 'session_state' not in st.session_state:
     st.session_state.session_state = {}
+
+#import function file 
+from suggestion_fn import *
 
 #global variables 
 global df_sugg
@@ -364,6 +369,7 @@ def main():
 
                             # Call the view_purchase_history function to retrieve purchase history for the user
                             purchase_history = view_purchase_history(username)
+                            
 
                             if purchase_history:
                                 # Convert the purchase history to a DataFrame for better display
@@ -401,12 +407,7 @@ def main():
                                             st.write("---")
 
                             else:
-                                st.write("No purchase history available for this user.")
-
-                            if st.button('Clear Purchase History'):
-                                delete_purchase_hisory(username)
-                                st.success("Purchase history has been cleared.")
-                                st.experimental_rerun()
+                                st.write("No purchase history available for this user.")
 
 
                         if task == "Smart Suggestions":
@@ -535,10 +536,111 @@ def main():
 
                             elif suggestion_type == "User Base":
                                 st.write("User based")
+
+                                if st.button("Don't press"):
+                                    export_to_csv()
+                                
+                                # Preprocess the data
+                                def preprocess_data(data):
+                                    user_items = defaultdict(list)
+                                    for row in data:
+                                        _,user_name,  _, item_name, _, _, _, _ = row
+                                        user_items[user_name].append(item_name)
+                                    return user_items
+
+                                #Build recommendation model
+                                def build_recommendation_model(user_items):
+                                    all_items = set()
+                                    for items in user_items.values():
+                                        all_items.update(items)
+
+                                    item_to_index = {item: i for i, item in enumerate(all_items)}
+
+                                    user_item_matrix = []
+                                    for user, items in user_items.items():
+                                        user_vector = [0] * len(all_items)
+                                        for item in items:
+                                            user_vector[item_to_index[item]] = 1
+                                        user_item_matrix.append(user_vector)
+
+                                    user_item_matrix = np.array(user_item_matrix)
+
+                                    similarity_matrix = cosine_similarity(user_item_matrix, user_item_matrix)
+
+                                    return similarity_matrix, item_to_index,user_item_matrix
+
+                                #Generate recommendations for a specific user
+                                def get_recommendations(user_id, user_items, similarity_matrix, item_to_index,user_item_matrix):
+                                    user_index = list(user_items.keys()).index(user_id)
+                                    user_similarities = similarity_matrix[user_index]
+                                    similar_users_indices = user_similarities.argsort()[::-1][1:]  
+
+                                    recommendations = set()
+                                    for idx in similar_users_indices:
+                                        for item_idx, val in enumerate(user_item_matrix[idx]):
+                                            if val == 1 and item_idx not in user_item_matrix[user_index]:
+                                                recommendations.add(item_idx)
+
+                                    recommended_items = [item for item, idx in item_to_index.items() if idx in recommendations]
+
+                                    return recommended_items
+
+
+                                
+                                def get_recommendation_details(recommendations):
+                                    details = []
+                                    for item_idx in recommendations:
+                                        # Get item details from the corresponding CSV file
+                                        category = "Men's"  # Assuming it's Men's category
+                                        if category == "Men's":
+                                            df_sugg = pd.read_csv("data/men.csv")
+                                        elif category == "Women's":
+                                            df_sugg = pd.read_csv("data/women.csv")
+                                        elif category == "Children's":
+                                            df_sugg = pd.read_csv("data/kids.csv")
+
+                                        # Extract relevant details (image_url, price)
+                                        item_details = df_sugg.iloc[item_idx]
+                                        image_url = item_details['image_url']
+                                        price = item_details['price']
+
+                                        details.append((image_url, price))
+
+                                    return details
+                                
+                                def display_recommendations_grid(details):
+                                    for image_url, price in details:
+                                        st.image(image_url, caption=f'Price: ${price}', use_column_width=True)
+                                                                                                
+                                data = view_purchase_history(username)
+
+                                user_items = preprocess_data(data)
+                                similarity_matrix, item_to_index,user_item_matrix = build_recommendation_model(user_items)
+                                
+                                
+                                # Get recommendations for a user
+                                recommendations = get_recommendations(username, user_items, similarity_matrix, item_to_index,user_item_matrix)
+                                
+        
+                                # Step 5: Get recommendation item details
+                                details = get_recommendation_details(recommendations)
+
+                                # Step 6: Display recommendations in grid pattern
+                                st.title(f"Recommended Items for {username}")
+                                display_recommendations_grid(details)
+
+                                def display_matrix(matrix):
+                                    for row in matrix:
+                                        print(row)
+
+                                # Assuming user_item_matrix is defined
+                                display_matrix(user_item_matrix)
+
+
                             else:
                                 st.write("Error.")
 
-
+ 
                             
                             
 

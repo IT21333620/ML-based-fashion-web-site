@@ -1,4 +1,6 @@
 # DB
+import csv
+import os
 import sqlite3
 conn = sqlite3.connect('cart.db',check_same_thread=False)
 c = conn.cursor()
@@ -153,6 +155,16 @@ def view_purchase_history(username):
     conn = sqlite3.connect('cart.db')
     c = conn.cursor()
     # Query to retrieve purchase history for a specific user
+    c.execute('''CREATE TABLE IF NOT EXISTS purchase_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                item_name TEXT NOT NULL,
+                price REAL NOT NULL,
+                total_price REAL NOT NULL,
+                quantity INTEGER NOT NULL,
+                purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+             )''')
     c.execute("SELECT * FROM purchase_history WHERE user_name = ?", (username,))
     purchase_history = c.fetchall()
     # Close the database connection
@@ -164,5 +176,49 @@ def delete_purchase_hisory(username):
     Delete all items in the purchase_hisory for a specific user.
     """
     c.execute("DELETE FROM purchase_history WHERE user_name=?", (username,))
+def create_payment_details_table():
+    conn = sqlite3.connect('cart.db')  # Connect to your database
+    c = conn.cursor()
+
+    c.execute('''
+              CREATE TABLE IF NOT EXISTS payment_details
+              (id INTEGER PRIMARY KEY AUTOINCREMENT,
+               account_number TEXT,
+               expiration_month INTEGER,
+               expiration_year INTEGER,
+               cvv INTEGER,
+               purchase_date DATE)
+              ''')
+
     conn.commit()
+
+def export_to_csv():
+    conn = sqlite3.connect('cart.db')
+    c = conn.cursor()
+
+    c.execute('SELECT * FROM purchase_history')
+    data = c.fetchall()
+
+    file_path = os.path.join('data', 'payment_history.csv')
+
+    with open(file_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['id', 'user_name', 'category', 'item_name', 'price', 'total_price','quantity','purchase_date'])
+        writer.writerows(data)
+
+    conn.close()
+
+def add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date):
+    conn = sqlite3.connect('cart.db')  # Connect to your database
+    c = conn.cursor()
+    create_payment_details_table()
+
+    c.execute('''
+    INSERT INTO payment_details
+    (account_number, expiration_month, expiration_year, cvv, purchase_date)
+    VALUES (?, ?, ?, ?, ?)
+    ''', (account_number, expiration_month, expiration_year, cvv, purchase_date))
+
+    conn.commit()
+
     
