@@ -4,11 +4,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+import math
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 from datetime import datetime
-import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
+from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.preprocessing import LabelEncoder
+import sqlite3
 
 if 'session_state' not in st.session_state:
     st.session_state.session_state = {}
@@ -314,19 +317,35 @@ def main():
 
                                 # Add a button to make the purchase
                                 if st.form_submit_button('Make Purchase'):
-
                                     purchase_date = datetime.today().strftime('%Y-%m-%d')
                                     add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
+                                    
                                     # Clear the form fields after successful submission
                                     account_number, expiration_month, expiration_year, cvv = '', None, None, None
+                                    cart_items = get_cart_items(username)
 
                                     if make_purchase(username):
                                         add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
+                                        
+                                          
+                                        # Process each item in the cart
+                                        for cart_item in cart_items:
+                                            item_name = cart_item[0]
+                                            quantity = cart_item[1] 
+
+                                            # Find the corresponding item in itemstable
+                                            item = get_item_by_name(item_name)
+                                            # Calculate the updated quantity
+                                            updated_quantity = item['quantity'] - quantity
+
+                                            # Update the quantity in itemstable
+                                            update_item_quantity(item_name, updated_quantity)
+
+                                            # Remove the item from the cart
+                                            remove_item_from_cart(username, item_name)
+
                                         conn.commit()
-
-
                                         st.success("Your purchase has been completed.")
-                                        # st.experimental_rerun()  # Refresh the page to reflect the updated cart
                                     else:
                                         st.warning("Your cart is empty. Add items to your cart before making a purchase.")
 
@@ -506,17 +525,12 @@ def main():
 
                                 
                             else:
-                                st.write("No item selected. Click 'View' on an item to see its details.")
-                        
-                            #convert data types
-
-
-                             
+                                st.write("No item selected. Click 'View' on an item to see its details.")     
 
                     elif user_type == "Admin":
                         st.subheader("Logged In")
                         st.success("Logged In as Admin :: {}".format(username))
-                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Forcasts'])
+                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Sales Forecast', 'Place Order', 'Order Delivery'])
 
                         if task == "Add Item":
                              st.subheader("Add Desired Item")
@@ -528,7 +542,8 @@ def main():
                                   item_sub_category = st.text_input("Sub category")
                                   item_name = st.text_input("Item Name")
                                   item_price = st.number_input("Item Price",min_value=1.0)
-                                  item_discount = st.slider("Item Discount",min_value=0.0,max_value=100.0)
+                                  item_discount = st.slider("Item Discount",min_value=0,max_value=100)
+                                  item_quantity = st.number_input("Item Quantity",min_value=1)
 
                              with col2:
                                   item_brand = st.text_input("Item Brand")
@@ -538,7 +553,7 @@ def main():
                             
                              if st.button("Add Item"):
                                   create_item_table()
-                                  add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,
+                                  add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,item_quantity,
                                                 0,"True",item_brand,item_color_varient_1,item_color_varient_2,item_image)
                                   st.success("Item {}'s {} added sucessfully".format(item_category,item_sub_category))
                              
@@ -548,7 +563,7 @@ def main():
                         elif task == "View Added Item":
                              st.subheader("View added item")
                              item_data = view_all_inventry_items()
-                             df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "quantity","likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              
                              num_items = len(df)
                              items_per_row = 4
@@ -571,7 +586,7 @@ def main():
                              st.subheader("Update items")
 
                              result = view_all_inventry_items()
-                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("Current Data"):
                                 st.dataframe(df)
 
@@ -586,11 +601,12 @@ def main():
                                   get_name = selected_result[0][2]
                                   get_price = selected_result[0][3]
                                   get_discount = selected_result[0][4]
-                                  get_isnew = selected_result[0][6]
-                                  get_brand = selected_result[0][7]
-                                  get_colour1 = selected_result[0][8]
-                                  get_colour2 = selected_result[0][9]
-                                  get_url = selected_result[0][10]
+                                  get_quantity = selected_result[0][5]
+                                  get_isnew = selected_result[0][7]
+                                  get_brand = selected_result[0][8]
+                                  get_colour1 = selected_result[0][9]
+                                  get_colour2 = selected_result[0][10]
+                                  get_url = selected_result[0][11]
 
                              col1,col2 = st.columns(2)
 
@@ -599,7 +615,8 @@ def main():
                                   newitem_sub_category = st.text_input("Sub category",get_subcategory)
                                   newitem_name = st.text_input("Item Name",get_name)
                                   newitem_price = st.number_input("Item Price",get_price)
-                                  newitem_discount = st.slider("Item Discount", 0.0, 100.0, get_discount)
+                                  newitem_discount = st.slider("Item Discount", 0, 100, get_discount)
+                                  newitem_quantity = st.number_input("Item Quantity",get_quantity)
 
                              with col2:
                                   newitem_isnew = st.selectbox(get_isnew,['True','False'])
@@ -609,13 +626,13 @@ def main():
                                   newitem_image = st.text_area("Image Link",get_url)
 
                              if st.button("Update Item"):
-                                edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_isnew,newitem_brand,
+                                edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_quantity,newitem_isnew,newitem_brand,
 			                                newitem_color_varient_1,newitem_color_varient_2,newitem_image,get_category,get_subcategory,get_name,get_price,
 			                                get_discount,get_isnew,get_brand,get_colour1,get_colour2,get_url)
                                 st.success("Sucessfully Updated {}".format(newitem_name))
 
                              result2 = view_all_inventry_items()
-                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("Updated Data"):
                                 st.dataframe(df2)
 
@@ -627,7 +644,7 @@ def main():
                              st.subheader("Delete items")
 
                              result = view_all_inventry_items()
-                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("Current Data"):
                                 st.dataframe(df)
 
@@ -641,14 +658,163 @@ def main():
                                 st.success("Task has been sucessfully deleted")
 
                              result2 = view_all_inventry_items()
-                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("New Data"):
                                 st.dataframe(df2)
 
 
-                        elif task == "Forcasts":
-                             st.subheader("View sales forcasts")
-                             
+                        elif task == "Sales Forecast":
+                            def load_data():
+                                conn = sqlite3.connect('cart.db')
+                                df = pd.read_sql('SELECT * FROM purchase_history', conn)
+                                conn.close()
+                                return df
+                            
+                            def get_item_quantity(item_name):
+                                conn = sqlite3.connect('data.db')  # Adjust the database path as needed
+                                c = conn.cursor()
+
+                                # Execute a SQL query to retrieve the quantity of the selected item
+                                c.execute("SELECT quantity FROM itemstable WHERE name = ?", (item_name,))
+                                quantity = c.fetchone()
+
+                                conn.close()
+
+                                return quantity[0] if quantity else 0
+                            
+                            # Function to load the CSV file based on category
+                            def load_category_data(category):
+                                if category == "Women's":
+                                    return 'data/women.csv'
+                                elif category == "Men's":
+                                    return 'data/men.csv'
+                                elif category == "Children's":
+                                    return 'data/kids.csv'
+                                else:
+                                    return None
+
+                            def encode_item_name(df):
+                                label_encoder = LabelEncoder()
+                                df['item_name_encoded'] = label_encoder.fit_transform(df['item_name'])
+                                return df
+
+                            # Forecast sales using a simple linear regression model for a specific item
+                            def forecast_sales_for_item(df, item_name, likes_count):
+                                item_df = df[df['item_name'] == item_name]
+                                item_df = item_df.groupby('item_name')['quantity'].sum().reset_index()
+
+                                X = item_df[['quantity']]
+                                y = item_df['quantity']
+
+                                model = ExtraTreesRegressor(n_estimators=100, random_state=0)
+                                model.fit(X, y)
+
+                                return model, likes_count
+                            
+                            st.title('Clothing Store Sales Forecasting')
+                            df = load_data()
+
+                            item_name = st.selectbox('Select an item for sales forecasting:', df['item_name'].unique())
+
+                            if item_name:
+                                # Get the category from purchase_history
+                                category = df.loc[df['item_name'] == item_name, 'category'].values[0]
+
+                                # Load the appropriate CSV data based on the category
+                                category_data_file = load_category_data(category)
+
+                                if category_data_file:
+                                    women_data = pd.read_csv(category_data_file)
+                                    likes_count = women_data.loc[women_data['name'] == item_name, 'likes_count'].values[0]
+                                    quantity_to_forecast = 2.33
+
+                                    model, likes_count = forecast_sales_for_item(df, item_name, likes_count)
+
+                                
+                                    forecasted_total_sales = model.predict([[quantity_to_forecast]])[0] * quantity_to_forecast
+                                    item_quantity = get_item_quantity(item_name)
+
+                                    # Add Likes_count to forecasted_total_sales
+                                    forecasted_total_sales += likes_count
+                                    forecasted_total_sales = math.ceil(forecasted_total_sales)
+
+                                    # Display the quantity of the selected item
+                                    st.write(f'Quantity in Inventory: {item_quantity} Units')
+                                    st.write("")
+
+                                    st.write(f'Total Predicted Sales: {forecasted_total_sales} Units')
+                                    st.write("")
+                                    if forecasted_total_sales >= item_quantity:
+                                        st.write('Status: Out of Stock')
+                                        create_order_table()
+                                        add_item_order(item_name,forecasted_total_sales)
+                                    else:
+                                        st.write('Status: In Stock')
+
+
+
+
+
+                        elif task == "Place Order":
+                            st.title('Place an order')
+                            def load_data():
+                                conn = sqlite3.connect('cart.db')
+                                df = pd.read_sql('SELECT * FROM purchase_history', conn)
+                                conn.close()
+                                return df
+                            
+                            df = load_data()
+                            item_name = st.selectbox('Select an item for sales forecasting:', df['item_name'].unique())
+
+                            item_quantity = st.number_input("Item Quantity",min_value=1)
+
+                            if st.button("Place Order"):
+                                create_order_table()
+                                add_item_order(item_name,item_quantity)
+                                st.success("Order placed successfully")
+
+                        elif task == "Order Delivery":
+                            st.title('Order Details')
+
+                            # Get a list of unique item names from the database
+                            c.execute('SELECT DISTINCT item_name FROM ordertable')
+                            item_names = [row[0] for row in c.fetchall()]
+
+                            # Create a dropdown to select item_name
+                            selected_item = st.selectbox('Select Item Name', item_names)
+
+                            # Query the database for the quantity of the selected item
+                            c.execute('SELECT item_quantity FROM ordertable WHERE item_name=?', (selected_item,))
+                            quantity = c.fetchone()
+
+                            # Display the quantity
+                            if quantity:
+                                st.write(f'Quantity for {selected_item}: {quantity[0]}')
+                            else:
+                                st.write(f'No quantity found for {selected_item}')
+
+                            # Add a "Received" button
+                            if st.button('Received'):
+                                conn = sqlite3.connect('data.db')
+                                c2 = conn.cursor()  # Use a different variable name here, like c2
+
+                                c2.execute('SELECT quantity FROM itemstable WHERE name=?', (selected_item,))
+                                current_quantity = c2.fetchone()
+
+                                if current_quantity:
+                                    # Calculate the new quantity by adding the received quantity
+                                    new_quantity = current_quantity[0] + quantity[0]
+
+                                    # Update the item_quantity in itemstable
+                                    c2.execute('UPDATE itemstable SET quantity=? WHERE name=?', (new_quantity, selected_item))
+                                    conn.commit()
+                                    st.write(f'Item quantity updated successfully')
+
+                                    c.execute('DELETE FROM ordertable WHERE item_name=?', (selected_item,))
+                                    conn.commit()
+                                    st.write(f'Record for {selected_item} has been removed from the order table.')
+                                else:
+                                    st.write(f'No item named {selected_item} found in itemstable')
 
                     else:
                         st.error("Unknown user type")

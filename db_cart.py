@@ -38,7 +38,7 @@ def viewCatogory(name):
     data = c.fetchall()
     return data
 
-# Perchase History
+# Purchase History
 
 def make_purchase(username):
     # Retrieve items from the cart for the user
@@ -134,3 +134,44 @@ def calculate_cart_subtotal(username):
     subtotal = c.fetchone()[0]
     conn.close()
     return subtotal
+
+
+#Inventory functions
+def is_cart_empty(username):
+    c.execute("SELECT COUNT(*) FROM cart WHERE user_name = ?", (username,))
+    count = c.fetchone()[0]
+    return count == 0
+
+def get_cart_items(username):
+    c.execute("SELECT item_name, quantity FROM cart WHERE user_name=?", (username,))
+    cart_items = c.fetchall()
+    return cart_items
+
+def remove_item_from_cart(username, item_name):
+    c.execute("DELETE FROM cart WHERE user_name = ? AND item_name = ?", (username, item_name))
+
+#Order functions
+def create_order_table():
+    c.execute('''CREATE TABLE IF NOT EXISTS ordertable (id INTEGER PRIMARY KEY AUTOINCREMENT, item_name TEXT, item_quantity INTEGER)''')
+
+def add_item_order(item_name, item_quantity):
+    c.execute("INSERT INTO ordertable (item_name, item_quantity) VALUES (?, ?)", (item_name, item_quantity))
+    conn.commit()
+
+def delete_order():
+    c.execute("DELETE FROM ordertable")
+    conn.commit()
+
+def delete_received_order(selected_item):
+    c.execute('DELETE FROM ordertable WHERE item_name=?', (selected_item,))
+    conn.commit()
+
+def get_order_quantity(selected_item):
+    c.execute('SELECT item_quantity FROM ordertable WHERE item_name=?', (selected_item,))
+    quantity = c.fetchone()
+    return quantity
+
+def get_unique_order():
+    c.execute('SELECT DISTINCT item_name FROM ordertable')
+    item_names = [row[0] for row in c.fetchall()]
+    return item_names
