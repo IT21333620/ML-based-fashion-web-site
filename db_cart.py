@@ -67,6 +67,67 @@ def view_cart(username):
     items = c.fetchall()
     return items
 
+def delete_item_from_cart(username, item_name):
+    """
+    Delete a specific item from the cart for a specific user.
+    """
+    c.execute("DELETE FROM cart WHERE user_name=? AND item_name=?", (username, item_name))
+    conn.commit()
+
+def update_cart_quantities(username, cart_df):
+    conn = sqlite3.connect('cart.db')
+    cursor = conn.cursor()
+
+    for index, row in cart_df.iterrows():
+        item_name = row['Item Name']
+        new_quantity = row['Quantity']
+        new_total_price = row['Total Price'] * new_quantity  # Calculate new total price
+        
+        # Update the quantity and total price in the database
+        cursor.execute("UPDATE cart SET quantity = ?, total_price = ? WHERE user_name = ? AND item_name = ?", 
+                       (new_quantity, new_total_price, username, item_name))
+
+    conn.commit()
+    conn.close()
+    return new_total_price
+
+def calculate_cart_subtotal(username):
+    conn = sqlite3.connect("cart.db")
+    c = conn.cursor()
+    c.execute("SELECT SUM(total_price) FROM cart WHERE user_name=?", (username,))
+    subtotal = c.fetchone()[0]
+    conn.close()
+    return subtotal
+
+def create_payment_details_table():
+    conn = sqlite3.connect('cart.db')  # Connect to your database
+    c = conn.cursor()
+
+    c.execute('''
+              CREATE TABLE IF NOT EXISTS payment_details
+              (id INTEGER PRIMARY KEY AUTOINCREMENT,
+               account_number TEXT,
+               expiration_month INTEGER,
+               expiration_year INTEGER,
+               cvv INTEGER,
+               purchase_date DATE)
+              ''')
+
+    conn.commit()
+
+def add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date):
+    conn = sqlite3.connect('cart.db')  # Connect to your database
+    c = conn.cursor()
+    create_payment_details_table()
+
+    c.execute('''
+    INSERT INTO payment_details
+    (account_number, expiration_month, expiration_year, cvv, purchase_date)
+    VALUES (?, ?, ?, ?, ?)
+    ''', (account_number, expiration_month, expiration_year, cvv, purchase_date))
+
+    conn.commit()
+
 # Define a function to create the purchase history table
 def create_purchase_history_table():
     conn = sqlite3.connect('cart.db')  
@@ -110,6 +171,11 @@ def view_purchase_history(username):
     conn.close()
     return purchase_history
 
+def delete_purchase_hisory(username):
+    """
+    Delete all items in the purchase_hisory for a specific user.
+    """
+    c.execute("DELETE FROM purchase_history WHERE user_name=?", (username,))
 def create_payment_details_table():
     conn = sqlite3.connect('cart.db')  # Connect to your database
     c = conn.cursor()
@@ -155,10 +221,4 @@ def add_payment_details(account_number, expiration_month, expiration_year, cvv, 
 
     conn.commit()
 
-def calculate_cart_subtotal(username):
-    conn = sqlite3.connect("cart.db")
-    c = conn.cursor()
-    c.execute("SELECT SUM(total_price) FROM cart WHERE user_name=?", (username,))
-    subtotal = c.fetchone()[0]
-    conn.close()
-    return subtotal
+    
