@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use('Agg')
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 from datetime import datetime
+import time
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
@@ -288,18 +289,40 @@ def main():
 
                         elif task == "Cart":
                             st.subheader("This is cart")
-                            
+    
                             # Call the view_all_items() function to retrieve cart items
                             cart_items = view_all_items(username)
-                            # Display the cart items in a table
+    
+                            # Display the cart items
                             if cart_items:
                                 cart_df = pd.DataFrame(cart_items, columns=["Username", "Item Name", "Category" ,"Total Price", "Quantity"])
                                 st.write("**Cart Items:**")
-                                st.dataframe(cart_df)
+        
+                                # Iterate through the cart items and display them individually
+                                for index, row in cart_df.iterrows():
+                                    st.write(f"**Item Name:** {row['Item Name']}")
+                                    st.write(f"**Category:** {row['Category']}")
+                                    st.write(f"**Total Price:** ${row['Total Price']:.2f}")
+                                    # Add a number input field for quantity
+                                    new_quantity = st.slider('Quantity:', min_value=1, max_value=10, value=row['Quantity'], key=f'quantity_{index}')
+                                    # If the quantity is updated, update the DataFrame
+                                    if new_quantity != row['Quantity']:
+                                        cart_df.at[index, 'Quantity'] = new_quantity
+                                        # Update cart with new quantities
+                                        update_cart_quantities(username, cart_df)
+                                    # Add a button to remove the item from the cart
+                                    if st.button(f'Remove : {row["Item Name"]}', key=f'remove_{index}'):
+                                        item_name = row['Item Name']
+                                        delete_item_from_cart(username, item_name)
+                                    st.write("---")  # Add a separator between items
 
-                                #Calculate and display the subtotal
+                                # Calculate and display the subtotal
                                 subtotal = calculate_cart_subtotal(username)
-                                st.write(f"*Subtotal:* ${subtotal:.2f}")
+                                if subtotal is not None:
+                                    st.write(f"*Subtotal:* ${subtotal:.2f}")
+                                else:
+                                    st.write("Items not available")                              
+
                             else:
                                 st.write("Your cart is empty.")
 
@@ -345,10 +368,45 @@ def main():
                             if purchase_history:
                                 # Convert the purchase history to a DataFrame for better display
                                 purchase_df = pd.DataFrame(purchase_history, columns=["ID", "User Name", "Category", "Item Name", "Price", "Total Price", "Quantity", "Purchase Date"])
-                                st.dataframe(purchase_df)
+
+                                # Convert 'Purchase Date' to datetime and round it to the nearest minute
+                                purchase_df['Purchase Date'] = pd.to_datetime(purchase_df['Purchase Date']).dt.round('min')
+
+                                # Group purchases by purchase date and time
+                                grouped_purchases = purchase_df.groupby('Purchase Date')
+
+                                # Display purchases for each group
+                                for purchase_time, group in grouped_purchases:
+                                    with st.expander(f"Purchases made at {purchase_time}:"):
+                                        # Select specific columns
+                                        display_df = group[['User Name', 'Item Name', 'Category', 'Quantity', 'Total Price']]
+                                        # Convert to list of dictionaries
+                                        purchases_list = display_df.to_dict('records')
+                                        for purchase in purchases_list:
+                                            st.write(f"**User Name:** {purchase['User Name']}")
+                                            st.write(f"**Item Name:** {purchase['Item Name']}")
+                                            st.write(f"**Category:** {purchase['Category']}")
+                                            st.write(f"**Quantity:** {purchase['Quantity']}")
+                                            st.write(f"**Total Price:** {purchase['Total Price']}")
+
+                                            # Add a rating input field for each item
+                                            rating = st.slider(label='Rate this item (1-10)', min_value=1, max_value=10, key=f"{purchase['Item Name']}_{purchase_time}_{purchase['Total Price']}_rating")  # Updated key
+
+                                            # Save the rating in the item_rating table
+                                            if st.button(f'Submit Rating : for {purchase["Item Name"]}_{purchase["Total Price"]}_{purchase_time}'):
+                                                create_item_rating_table()
+                                                save_item_rating(username, purchase['Item Name'], rating)
+                                                st.success("Thank you for rating our product.")
+
+                                            st.write("---")
 
                             else:
-                                st.write("No purchase history available for this user.")
+                                st.write("No purchase history available for this user.")
+
+                            if st.button('Clear Purchase History'):
+                                delete_purchase_hisory(username)
+                                st.success("Purchase history has been cleared.")
+                                st.experimental_rerun()
 
 
                         if task == "Smart Suggestions":

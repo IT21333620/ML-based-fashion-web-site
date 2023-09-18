@@ -76,3 +76,47 @@ def get_user_type(username):
         return user_type[0]
     else:
         return None
+
+
+# Function to create Item rating table
+
+def create_item_rating_table(): 
+    cursor = conn.cursor()
+    # Define the SQL command to create the item_rating table
+    create_table_query = '''
+    CREATE TABLE IF NOT EXISTS item_rating (
+        RatingID INTEGER PRIMARY KEY AUTOINCREMENT,
+        UserID INTEGER,
+        UserName TEXT,
+        ItemName TEXT,
+        Rating INTEGER,
+        FOREIGN KEY (UserID) REFERENCES userstable (rowid),  -- Assuming userstable has a rowid column
+        FOREIGN KEY (UserName) REFERENCES userstable (username) -- Assuming userstable has a username column
+    );
+    '''
+    cursor.execute(create_table_query)
+    conn.commit()
+
+def save_item_rating(username, item_name, rating):
+    # Create a cursor object to execute SQL queries
+    cursor = conn.cursor()
+    try:
+        # Insert the rating into the item_rating table
+        cursor.execute("INSERT INTO item_rating (UserID, UserName, ItemName, Rating) VALUES (?, ?, ?, ?)",
+                       (get_user_id(username), username, item_name, rating))
+        # Commit the changes
+        conn.commit()
+        return True  # Return True to indicate successful saving of rating
+    except Exception as e:
+        print(f"Error saving rating: {e}")
+        conn.rollback()
+        return False  # Return False to indicate an error occurred while saving rating
+
+# Function to get the UserID based on the username
+def get_user_id(username):
+    c.execute('SELECT rowid FROM userstable WHERE username = ?', (username,))
+    user_id = c.fetchone()
+    if user_id:
+        return user_id[0]
+    else:
+        return None
