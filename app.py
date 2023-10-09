@@ -16,6 +16,7 @@ from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.preprocessing import LabelEncoder
 import math
 import sqlite3
+from io import BytesIO
 
 if 'session_state' not in st.session_state:
     st.session_state.session_state = {}
@@ -79,11 +80,19 @@ def main():
         new_password = st.text_input("Password", type='password')
         new_usertype = st.selectbox("Type", ['User'], key="usertype_selectbox",disabled=True)
 
-
         if st.button("Signup"):
-            create_usertable()
-            add_userdata(new_name,new_age,new_gender,new_user,make_hashes(new_password),new_usertype)
-            st.success("Account created sucessfully")
+            if (
+                not new_name
+                or not new_age
+                or not new_gender
+                or not new_user
+                or not new_password
+            ):
+                st.warning("Please fill in all required fields.")
+            else:
+                create_usertable()
+                add_userdata(new_name, new_age, new_gender, new_user, make_hashes(new_password), new_usertype)
+                st.success("Account created successfully")
             
 
     elif choice == "Login":
@@ -696,7 +705,7 @@ def main():
                     elif user_type == "Admin":
                         st.subheader("Logged In")
                         st.success("Logged In as Admin :: {}".format(username))
-                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Sales Forecast', 'Place Order', 'Order Delivery'])
+                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Report','Sales Forecast', 'Place Order', 'Order Delivery'])
 
                         if task == "Add Item":
                              st.subheader("Add Desired Item")
@@ -718,17 +727,46 @@ def main():
                                   item_image = st.text_area("Image Link")
                             
                              if st.button("Add Item"):
-                                  create_item_table()
-                                  add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,item_quantity,
-                                                0,"True",item_brand,item_color_varient_1,item_color_varient_2,item_image)
-                                  st.success("Item {}'s {} added sucessfully".format(item_category,item_sub_category))
-                             
+                                #   create_item_table()
+                                #   add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,item_quantity,
+                                #                 0,"True",item_brand,item_color_varient_1,item_color_varient_2,item_image)
+                                #   st.success("Item {}'s {} added sucessfully".format(item_category,item_sub_category))
+                                if (
+                                    not item_category
+                                    or not item_sub_category
+                                    or not item_name
+                                    or not item_price
+                                    or not item_discount
+                                    or not item_quantity
+                                    or not item_brand
+                                    or not item_color_varient_1
+                                    or not item_color_varient_2
+                                    or not item_image
+                                ):
+                                    st.warning("Please fill in all required fields.")
+                                else:
+                                    create_item_table()
+                                    add_item_data(
+                                        item_category,
+                                        item_sub_category,
+                                        item_name,
+                                        item_price,
+                                        item_discount,
+                                        item_quantity,
+                                        0,
+                                        "True",
+                                        item_brand,
+                                        item_color_varient_1,
+                                        item_color_varient_2,
+                                        item_image,
+                                    )
+                                    st.success("Item {}'s {} added successfully".format(item_category, item_sub_category))
 
 
 
                         elif task == "View Added Item":
                              st.subheader("View added item")
-                             item_data = view_all_inventry_items()
+                             item_data = view_all_inventry_items_ordered_by_insertion()
                              df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              
                              num_items = len(df)
@@ -751,7 +789,7 @@ def main():
                         elif task == "Update Item":
                              st.subheader("Update items")
 
-                             result = view_all_inventry_items()
+                             result = view_all_inventry_items_ordered_by_insertion()
                              df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("Current Data"):
                                 st.dataframe(df)
@@ -780,9 +818,9 @@ def main():
                                   newitem_category = st.selectbox(get_category,['Men','Women'])
                                   newitem_sub_category = st.text_input("Sub category",get_subcategory)
                                   newitem_name = st.text_input("Item Name",get_name)
-                                  newitem_price = st.number_input("Item Price",get_price)
+                                  newitem_price = st.number_input("Item Price",min_value=0.0,value=get_price)
                                   newitem_discount = st.slider("Item Discount", 0, 100, get_discount)
-                                  newitem_quantity = st.number_input("Item Quantity",get_quantity)
+                                  newitem_quantity = st.number_input("Item Quantity",min_value=0,value=get_quantity)
 
                              with col2:
                                   newitem_isnew = st.selectbox(get_isnew,['True','False'])
@@ -792,12 +830,47 @@ def main():
                                   newitem_image = st.text_area("Image Link",get_url)
 
                              if st.button("Update Item"):
-                                edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,newitem_discount,newitem_quantity,newitem_isnew,newitem_brand,
-			                                newitem_color_varient_1,newitem_color_varient_2,newitem_image,get_category,get_subcategory,get_name,get_price,
-			                                get_discount,get_isnew,get_brand,get_colour1,get_colour2,get_url)
-                                st.success("Sucessfully Updated {}".format(newitem_name))
+                                if (
+                                    not newitem_category
+                                    or not newitem_sub_category
+                                    or not newitem_name
+                                    or not newitem_price
+                                    or not newitem_discount
+                                    or not newitem_quantity
+                                    or not newitem_isnew
+                                    or not newitem_brand
+                                    or not newitem_color_varient_1
+                                    or not newitem_color_varient_2
+                                    or not newitem_image
+                                ):
+                                    st.warning("Please fill in all required fields.")
+                                else:
+                                    edit_item(
+                                        newitem_category,
+                                        newitem_sub_category,
+                                        newitem_name,
+                                        newitem_price,
+                                        newitem_discount,
+                                        newitem_quantity,
+                                        newitem_isnew,
+                                        newitem_brand,
+                                        newitem_color_varient_1,
+                                        newitem_color_varient_2,
+                                        newitem_image,
+                                        get_category,
+                                        get_subcategory,
+                                        get_name,
+                                        get_price,
+                                        get_discount,
+                                        get_isnew,
+                                        get_brand,
+                                        get_colour1,
+                                        get_colour2,
+                                        get_url,
+                                    )
+                                    st.success("Successfully Updated {}".format(newitem_name))
 
-                             result2 = view_all_inventry_items()
+                             result2 = view_all_inventry_items_ordered_by_insertion()
                              df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("Updated Data"):
                                 st.dataframe(df2)
@@ -809,7 +882,7 @@ def main():
                         elif task == "Delete Item":
                              st.subheader("Delete items")
 
-                             result = view_all_inventry_items()
+                             result = view_all_inventry_items_ordered_by_insertion()
                              df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("Current Data"):
                                 st.dataframe(df)
@@ -823,10 +896,72 @@ def main():
                                 delete_item(selected_item)
                                 st.success("Task has been sucessfully deleted")
 
-                             result2 = view_all_inventry_items()
+                             result2 = view_all_inventry_items_ordered_by_insertion()
                              df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
                              with st.expander("New Data"):
                                 st.dataframe(df2)
+
+                                
+
+                        elif task == "Report":
+                            st.subheader("Generate Report")
+
+                            data = view_all_inventry_items()
+                            categories = [item[0] for item in data]
+
+                            category_counts = {category: categories.count(category) for category in set(categories)}
+
+                            category_labels = list(category_counts.keys())
+                            category_values = list(category_counts.values())
+
+                            plt.figure(figsize=(8, 8))
+                            plt.pie(category_values, labels=category_labels, autopct='%1.1f%%', startangle=140)
+                            plt.title('Distribution of Items by Category')
+                            plt.axis('equal')
+
+                            buffer = BytesIO()
+                            plt.savefig(buffer, format='png')
+                            plt.close()
+                            buffer.seek(0)
+
+                            st.image(buffer, use_column_width=True)
+
+                            st.download_button(
+                                label="Download Pie Chart Image",
+                                data=buffer.getvalue(),
+                                file_name="pie_chart.png",
+                                key="download_pie_chart",
+                            )
+
+                            data = view_all_inventry_items()
+
+
+                            df = pd.DataFrame(data, columns=['category', 'subcategory', 'name', 'price', 'discount', 'quantity', 'likes', 'isnew', 'brand', 'colour1', 'colour2', 'photo'])
+
+
+                            category_counts = df.groupby(['category', 'subcategory']).size().reset_index(name='count')
+
+
+                            plt.figure(figsize=(10, 6))
+                            plt.bar(range(len(category_counts)), category_counts['count'], tick_label=category_counts.apply(lambda x: f"{x['subcategory']}", axis=1))
+                            plt.xticks(rotation=90)
+                            plt.xlabel('Subcategory')
+                            plt.ylabel('Count')
+                            plt.title('Distribution of Items by Subcategory')
+
+                            buffer = BytesIO()
+                            plt.savefig(buffer, format='png')
+                            plt.close()
+                            buffer.seek(0)
+
+                            st.image(buffer, use_column_width=True)
+
+                            st.download_button(
+                                label="Download Bar Chart Image",
+                                data=buffer.getvalue(),
+                                file_name="bar_chart.png",
+                                key="download_bar_chart",
+                            )
 
 
                         elif task == "Sales Forecast":

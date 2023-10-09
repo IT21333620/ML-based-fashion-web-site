@@ -18,8 +18,13 @@ def view_all_inventry_items():
 	data = c.fetchall()
 	return data
 
+def view_all_inventry_items_ordered_by_insertion():
+    c.execute('SELECT * FROM itemstable ORDER BY ROWID DESC')
+    data = c.fetchall()
+    return data
+
 def view_unique_item():
-    c.execute('SELECT DISTINCT name FROM itemstable')
+    c.execute('SELECT DISTINCT name FROM itemstable ORDER BY ROWID DESC')
     data = c.fetchall()
     return data
 
