@@ -17,6 +17,8 @@ from sklearn.preprocessing import LabelEncoder
 import math
 import sqlite3
 from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 if 'session_state' not in st.session_state:
     st.session_state.session_state = {}
@@ -120,29 +122,27 @@ def main():
                             task1 = st.selectbox("Select Category", ["Women's", "Men's", "Children's"])
                             if task1 == "Women's":
                                 df = pd.read_csv("data/women.csv")
-                                # Remove rows with null values in the specified columns
+                                #Remove rows with null values in the specified columns
                                 df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
 
                                 substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
 
-                                # Use boolean indexing to filter out rows containing the substring
+                                #Use boolean indexing to filter out rows containing the substring
                                 df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
 
                                 page_size = 24
                                 page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
 
-                                # Calculate the start and end indices for the current page
+                                
                                 start_index = (page_number - 1) * page_size
                                 end_index = start_index + page_size
 
-                                # Slice the dataset for the current page
+                                
                                 current_page_df = df[start_index:end_index]
 
-                                # Display the dataset with images for the current page
+                                
                                 st.subheader("Men's Clothing")
                                 st.write('**Products (Page {}):**'.format(page_number))
-
-                                # Create a Streamlit row to display items in a horizontal line
                                 cols = st.columns(4)
 
                                   
@@ -159,14 +159,14 @@ def main():
                                     
                                         st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
 
-                                        # Display the price below the image
+                                        #Displaying the price
                                         st.write(f"Price: ${row_data['current_price']:.2f}")
 
-                                        # Add an input field for quantity
+                                        #Get quantity
                                         quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
                                         total_price = row_data['current_price'] * quantity
 
-                                        # Add the "Add to Cart" button inside a custom container div
+                                        #Add to Cart
                                         with st.container():
                                             if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
                                                 create_cart_table()
@@ -176,35 +176,29 @@ def main():
                                             st.write("")
                                             st.write("")
 
-                                # Create a "Load More" button to fetch the next page
+                                
                                 if end_index < len(df):
                                     st.sidebar.button("Load More")
 
                             elif task1 == "Men's":
                                 df = pd.read_csv("data/men.csv")
-                                # Remove rows with null values in the specified columns
+                                #Remove rows with null values in the specified columns
                                 df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
 
                                 substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
 
-                                # Use boolean indexing to filter out rows containing the substring
+                                #Use boolean indexing to filter out rows containing the substring
                                 df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
 
                                 page_size = 24
                                 page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
-
-                                # Calculate the start and end indices for the current page
                                 start_index = (page_number - 1) * page_size
                                 end_index = start_index + page_size
-
-                                # Slice the dataset for the current page
                                 current_page_df = df[start_index:end_index]
 
-                                # Display the dataset with images for the current page
                                 st.subheader("Men's Clothing")
-                                st.write('**Products (Page {}):**'.format(page_number))
 
-                                # Create a Streamlit row to display items in a horizontal line
+                                st.write('**Products (Page {}):**'.format(page_number))
                                 cols = st.columns(4)
 
                                   
@@ -221,14 +215,14 @@ def main():
                                     
                                         st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
 
-                                        # Display the price below the image
+                                        #Displaying the price
                                         st.write(f"Price: ${row_data['current_price']:.2f}")
 
-                                        # Add an input field for quantity
+                                        #Get quantity
                                         quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
                                         total_price = row_data['current_price'] * quantity
 
-                                        # Add the "Add to Cart" button inside a custom container div
+                                        #Add to Cart
                                         with st.container():
                                             if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
                                                 create_cart_table()
@@ -238,35 +232,33 @@ def main():
                                             st.write("")
                                             st.write("")
 
-                                # Create a "Load More" button to fetch the next page
+                                
                                 if end_index < len(df):
                                     st.sidebar.button("Load More")
 
                             elif task1 == "Children's":
                                 df = pd.read_csv("data/kids.csv")
-                                # Remove rows with null values in the specified columns
+                                #Remove rows with null values in the specified columns
                                 df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
 
                                 substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
 
-                                # Use boolean indexing to filter out rows containing the substring
+                                #Use boolean indexing to filter out rows containing the substring
                                 df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
 
                                 page_size = 24
                                 page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
 
-                                # Calculate the start and end indices for the current page
                                 start_index = (page_number - 1) * page_size
                                 end_index = start_index + page_size
 
-                                # Slice the dataset for the current page
+                                
                                 current_page_df = df[start_index:end_index]
 
-                                # Display the dataset with images for the current page
+                                
                                 st.subheader("Men's Clothing")
                                 st.write('**Products (Page {}):**'.format(page_number))
 
-                                # Create a Streamlit row to display items in a horizontal line
                                 cols = st.columns(4)
 
                                   
@@ -283,14 +275,14 @@ def main():
                                     
                                         st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
 
-                                        # Display the price below the image
+                                        #Displaying the price
                                         st.write(f"Price: ${row_data['current_price']:.2f}")
 
-                                        # Add an input field for quantity
+                                        #Get quantity
                                         quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
                                         total_price = row_data['current_price'] * quantity
 
-                                        # Add the "Add to Cart" button inside a custom container div
+                                        #Add to Cart
                                         with st.container():
                                             if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
                                                 create_cart_table()
@@ -300,7 +292,7 @@ def main():
                                             st.write("")
                                             st.write("")
 
-                                # Create a "Load More" button to fetch the next page
+                                
                                 if end_index < len(df):
                                     st.sidebar.button("Load More")
 
@@ -963,6 +955,60 @@ def main():
                                 key="download_bar_chart",
                             )
 
+                            st.title('Inventory Levels')
+
+                            if st.button('Generate Report'):
+                                data = get_columns_pdf()
+                                
+                                def generate_pdf(data):
+                                    pdf_filename = 'items.pdf'
+                                    c = canvas.Canvas(pdf_filename, pagesize=letter)
+                                    c.setFont("Helvetica-Bold", 16)
+                                    c.drawString(100, 750, "Items Report")
+                                    c.setFont("Helvetica-Bold", 12)
+                                    c.drawString(100, 700, "Name")
+                                    c.drawString(350, 700, "Quantity")
+                                    c.drawString(500, 700, "Price")
+                                    c.setFont("Helvetica", 12)
+
+                                    y = 680
+                                    records_per_page = 35
+                                    page_number = 1
+
+                                    for idx, row in enumerate(data):
+                                        if idx % records_per_page == 0:
+                                            if idx > 0:
+                                                c.showPage()
+                                                page_number += 1
+                                                y = 750
+
+                                                if page_number > 1:
+                                                    c.setFont("Helvetica", 12)
+                                                    c.drawString(100, y, row[0])
+                                                    c.drawString(350, y, str(row[1]))
+                                                    c.drawString(500, y, str(row[2]))
+                                                    y -= 20
+                                            else:
+                                                continue
+
+                                        name = row[0][:32] + "..." if len(row[0]) > 32 else row[0]
+
+                                        c.drawString(100, y, name)
+                                        c.drawString(350, y, str(row[1]))
+                                        c.drawString(500, y, str(row[2]))
+                                        y -= 20
+
+                                    c.save()
+
+                                generate_pdf(data)
+
+                                st.download_button(
+                                    label="Download Report",
+                                    data=open("items.pdf", "rb").read(),
+                                    key="download-pdf",
+                                    file_name="items.pdf",
+                                )
+
 
                         elif task == "Sales Forecast":
                             def load_data():
@@ -972,10 +1018,8 @@ def main():
                                 return df
                             
                             def get_item_quantity(item_name):
-                                conn = sqlite3.connect('data.db')  # Adjust the database path as needed
+                                conn = sqlite3.connect('data.db')
                                 c = conn.cursor()
-
-                                # Execute a SQL query to retrieve the quantity of the selected item
                                 c.execute("SELECT quantity FROM itemstable WHERE name = ?", (item_name,))
                                 quantity = c.fetchone()
 
@@ -983,7 +1027,7 @@ def main():
 
                                 return quantity[0] if quantity else 0
                             
-                            # Function to load the CSV file based on category
+                            
                             def load_category_data(category):
                                 if category == "Women's":
                                     return 'data/women.csv'
@@ -999,7 +1043,7 @@ def main():
                                 df['item_name_encoded'] = label_encoder.fit_transform(df['item_name'])
                                 return df
 
-                            # Forecast sales using a simple linear regression model for a specific item
+                            #Extra trees regressor model
                             def forecast_sales_for_item(df, item_name, likes_count):
                                 item_df = df[df['item_name'] == item_name]
                                 item_df = item_df.groupby('item_name')['quantity'].sum().reset_index()
@@ -1018,10 +1062,7 @@ def main():
                             item_name = st.selectbox('Select an item for sales forecasting:', df['item_name'].unique())
 
                             if item_name:
-                                # Get the category from purchase_history
                                 category = df.loc[df['item_name'] == item_name, 'category'].values[0]
-
-                                # Load the appropriate CSV data based on the category
                                 category_data_file = load_category_data(category)
 
                                 if category_data_file:
@@ -1034,12 +1075,10 @@ def main():
                                 
                                     forecasted_total_sales = model.predict([[quantity_to_forecast]])[0] * quantity_to_forecast
                                     item_quantity = get_item_quantity(item_name)
-
-                                    # Add Likes_count to forecasted_total_sales
                                     forecasted_total_sales += likes_count
                                     forecasted_total_sales = math.ceil(forecasted_total_sales)
 
-                                    # Display the quantity of the selected item
+                                    
                                     st.write(f'Quantity in Inventory: {item_quantity} Units')
                                     st.write("")
 
@@ -1054,55 +1093,57 @@ def main():
                              
                         elif task == "Place Order":
                             st.title('Place an order')
+
                             def load_data():
                                 conn = sqlite3.connect('cart.db')
                                 df = pd.read_sql('SELECT * FROM purchase_history', conn)
                                 conn.close()
                                 return df
-                            
-                            df = load_data()
-                            item_name = st.selectbox('Select an item for sales forecasting:', df['item_name'].unique())
 
-                            item_quantity = st.number_input("Item Quantity",min_value=1)
+                            df = load_data()
+
+                            search_query = st.text_input('Search by Item Name:')
+                            
+                            if search_query:
+                                filtered_df = df[df['item_name'].str.contains(search_query, case=False)]
+                            else:
+                                filtered_df = df
+
+                            item_name = st.selectbox('Select an item for sales forecasting:', filtered_df['item_name'].unique())
+
+                            item_quantity = st.number_input("Item Quantity", min_value=1)
 
                             if st.button("Place Order"):
                                 create_order_table()
-                                add_item_order(item_name,item_quantity)
+                                add_item_order(item_name, item_quantity)
                                 st.success("Order placed successfully")
+
 
                         elif task == "Order Delivery":
                             st.title('Order Details')
-
-                            # Get a list of unique item names from the database
                             c.execute('SELECT DISTINCT item_name FROM ordertable')
                             item_names = [row[0] for row in c.fetchall()]
 
-                            # Create a dropdown to select item_name
                             selected_item = st.selectbox('Select Item Name', item_names)
 
-                            # Query the database for the quantity of the selected item
                             c.execute('SELECT item_quantity FROM ordertable WHERE item_name=?', (selected_item,))
                             quantity = c.fetchone()
 
-                            # Display the quantity
                             if quantity:
                                 st.write(f'Quantity for {selected_item}: {quantity[0]}')
                             else:
                                 st.write(f'No quantity found for {selected_item}')
 
-                            # Add a "Received" button
                             if st.button('Received'):
                                 db_connection  = sqlite3.connect('data.db')
-                                c2 = db_connection .cursor()  # Use a different variable name here, like c2
+                                c2 = db_connection .cursor()
 
                                 c2.execute('SELECT quantity FROM itemstable WHERE name=?', (selected_item,))
                                 current_quantity = c2.fetchone()
 
                                 if current_quantity:
-                                    # Calculate the new quantity by adding the received quantity
                                     new_quantity = current_quantity[0] + quantity[0]
-
-                                    # Update the item_quantity in itemstable
+                                    
                                     c2.execute('UPDATE itemstable SET quantity=? WHERE name=?', (new_quantity, selected_item))
                                     db_connection .commit()
                                     st.write(f'Item quantity updated successfully')

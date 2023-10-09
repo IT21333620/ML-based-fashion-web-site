@@ -156,3 +156,9 @@ def update_item_quantity(item_name, updated_quantity):
         print(f"Successfully updated quantity for {item_name}")
     except sqlite3.Error as e:
         print(f"Error updating quantity for {item_name}: {str(e)}")
+
+#PDF generation related functions
+def get_columns_pdf():
+    c.execute('SELECT name, quantity, price FROM itemstable')
+    data = c.fetchall()
+    return data
