@@ -1,4 +1,6 @@
 # DB
+import csv
+import os
 import sqlite3
 conn = sqlite3.connect('data.db',check_same_thread=False)
 c = conn.cursor()
@@ -109,6 +111,26 @@ def save_item_rating(username, item_name, rating):
         # Insert the rating into the item_rating table
         cursor.execute("INSERT INTO item_rating (UserID, UserName, ItemName, Rating) VALUES (?, ?, ?, ?)",
                        (get_user_id(username), username, item_name, rating))
+        cursor.execute("SELECT UserID, UserName, ItemName, Rating FROM item_rating ORDER BY RowID DESC LIMIT 1")
+        last_updated_data = cursor.fetchone()
+        if last_updated_data:
+            # Construct the file path
+            file_path = os.path.join('data', 'rating.csv')
+
+            # Write data to the CSV file
+            if os.path.exists(file_path):
+                # Read existing data from the CSV file
+                with open(file_path, 'r', newline='', encoding='utf-8') as file:
+                    existing_data = list(csv.reader(file))
+
+                # Append the new data to the existing data
+                existing_data.append(last_updated_data)
+
+                # Write all data (including existing and new) back to the file
+                with open(file_path, 'w', newline='', encoding='utf-8') as file:
+                    writer = csv.writer(file)
+                    writer.writerows(existing_data)
+                    
         # Commit the changes
         conn.commit()
         return True  # Return True to indicate successful saving of rating

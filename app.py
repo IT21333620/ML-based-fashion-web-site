@@ -19,9 +19,15 @@ import sqlite3
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import scipy.stats
+# Visualization
+import seaborn as sns
 
 if 'session_state' not in st.session_state:
     st.session_state.session_state = {}
+
+if 'selected_item' not in st.session_state:
+    st.session_state['selected_item'] = {}
 
 #import function file 
 from suggestion_fn import *
@@ -314,7 +320,7 @@ def main():
                                     st.write(f"**Category:** {row['Category']}")
                                     st.write(f"**Total Price:** ${row['Total Price']:.2f}")
                                     # Add a number input field for quantity
-                                    new_quantity = st.slider('Quantity:', min_value=1, max_value=10, value=row['Quantity'], key=f'quantity_{index}')
+                                    new_quantity = st.slider('Quantity:', min_value=1, max_value=12, value=row['Quantity'], key=f'quantity_{index}')
                                     # If the quantity is updated, update the DataFrame
                                     if new_quantity != row['Quantity']:
                                         cart_df.at[index, 'Quantity'] = new_quantity
@@ -550,7 +556,7 @@ def main():
                                                         'color2':row[1]['variation_1_color']   
                                                         
                                                     }
-
+                                            
                                 else:
                                     st.write("No items in the cart.") 
 
@@ -558,120 +564,147 @@ def main():
                             elif suggestion_type == "User Base":
                                 st.write("User based")
 
-                                if st.button("Don't press"):
-                                    export_to_csv()
+
+                                    
+                                export_item_to_csv()
+                                    
+
+                                ratings = pd.read_csv("data/rating.csv",encoding='utf-8')
                                 
-                                # Preprocess the data
-                                def preprocess_data(data):
-                                    user_items = defaultdict(list)
-                                    for row in data:
-                                        _,user_name,  _, item_name, _, _, _, _ = row
-                                        user_items[user_name].append(item_name)
-                                    return user_items
-
-                                #Build recommendation model
-                                def build_recommendation_model(user_items):
-                                    all_items = set()
-                                    for items in user_items.values():
-                                        all_items.update(items)
-
-                                    item_to_index = {item: i for i, item in enumerate(all_items)}
-
-                                    user_item_matrix = []
-                                    for user, items in user_items.items():
-                                        user_vector = [0] * len(all_items)
-                                        for item in items:
-                                            user_vector[item_to_index[item]] = 1
-                                        user_item_matrix.append(user_vector)
-
-                                    user_item_matrix = np.array(user_item_matrix)
-
-                                    similarity_matrix = cosine_similarity(user_item_matrix, user_item_matrix)
-
-                                    return similarity_matrix, item_to_index,user_item_matrix
-
-                                #Generate recommendations for a specific user
-                                def get_recommendations(user_id, user_items, similarity_matrix, item_to_index,user_item_matrix):
-                                    user_index = list(user_items.keys()).index(user_id)
-                                    user_similarities = similarity_matrix[user_index]
-                                    similar_users_indices = user_similarities.argsort()[::-1][1:]  
-
-                                    recommendations = set()
-                                    for idx in similar_users_indices:
-                                        for item_idx, val in enumerate(user_item_matrix[idx]):
-                                            if val == 1 and item_idx not in user_item_matrix[user_index]:
-                                                recommendations.add(item_idx)
-
-                                    recommended_items = [item for item, idx in item_to_index.items() if idx in recommendations]
-
-                                    return recommended_items
-
-
+                                items = pd.read_csv("data/Avilableitems.csv")
                                 
-                                def get_recommendation_details(recommendations):
-                                    details = []
-                                    for item_idx in recommendations:
-                                        # Get item details from the corresponding CSV file
-                                        category = "Men's"  # Assuming it's Men's category
-                                        if category == "Men's":
-                                            df_sugg = pd.read_csv("data/men.csv")
-                                        elif category == "Women's":
-                                            df_sugg = pd.read_csv("data/women.csv")
-                                        elif category == "Children's":
-                                            df_sugg = pd.read_csv("data/kids.csv")
-
-                                        # Extract relevant details (image_url, price)
-                                        item_details = df_sugg.iloc[item_idx]
-                                        image_url = item_details['image_url']
-                                        price = item_details['price']
-
-                                        details.append((image_url, price))
-
-                                    return details
+                                df = pd.merge(ratings,items, on='name',how='inner')
                                 
-                                def display_recommendations_grid(details):
-                                    for image_url, price in details:
-                                        st.image(image_url, caption=f'Price: ${price}', use_column_width=True)
-                                                                                                
-                                data = view_purchase_history(username)
 
-                                user_items = preprocess_data(data)
-                                similarity_matrix, item_to_index,user_item_matrix = build_recommendation_model(user_items)
+                                agg_ratings = df.groupby('name').agg(mean_rating = ('Rating','mean'),number_of_ratings = ('Rating','count')).reset_index()
                                 
+
+                                df_GT10 = pd.merge(df, agg_ratings[['name']], on='name', how='inner')
+                                df_GT10['Rating'] = pd.to_numeric(df_GT10['Rating'], errors='coerce')
                                 
-                                # Get recommendations for a user
-                                recommendations = get_recommendations(username, user_items, similarity_matrix, item_to_index,user_item_matrix)
+                                #visualization 
+                                #sns_plot = sns.jointplot(x='mean_rating', y='number_of_ratings', data=agg_ratings)
+                                #st.pyplot(sns_plot.fig)
+
+                                import io
+                                buffer = io.StringIO()
+                                agg_ratings.info(buf=buffer)
+                                s = buffer.getvalue()
+                                #st.text(s)
+
+                                #Create matrix
+                                matrix = df_GT10.pivot_table(index='UserID', columns='name', values='Rating')
+                                #st.write(matrix.head())
+
+                                #Normalization
+                                matrix_norm = matrix
+                                #st.write(matrix_norm.head())
+
+                                # User similarity matrix using Pearson correlation
+                                user_similarity = matrix_norm.T.corr()
+
+                                # User similarity matrix using cosine similarity
+                                user_similarity_cosine = cosine_similarity(matrix_norm.fillna(0))
+
+                                picked_userid = getUserId(username)
+                                user_similarity.drop(index=picked_userid, inplace=True)
+
+                                # Take a look at the data
+                                #st.write(user_similarity.head(100))
+
+                                # Number of similar users
+                                n = 10
+
+                                # User similarity threashold
+                                user_similarity_threshold = 0.3
+
+                                # Get top n similar users
+                                similar_users = user_similarity[user_similarity[picked_userid] > user_similarity_threshold][picked_userid].sort_values(ascending=False)[:n]
                                 
-        
-                                # Step 5: Get recommendation item details
-                                details = get_recommendation_details(recommendations)
-
-                                # Step 6: Display recommendations in grid pattern
-                                st.title(f"Recommended Items for {username}")
-                                display_recommendations_grid(details)
-
-                                def display_matrix(matrix):
-                                    for row in matrix:
-                                        print(row)
-
-                                # Assuming user_item_matrix is defined
-                                display_matrix(user_item_matrix)
 
 
-                            else:
-                                st.write("Error.")
+                                # Print out top n similar users
+                                #st.write(f'The similar users for user {picked_userid} are', similar_users)
 
- 
-                            
-                            
+                                # Items that the target user has purchsed 
+                                picked_userid_purchsed = matrix_norm[matrix_norm.index == picked_userid].dropna(axis=1, how='all')
+                                
+                                # Items that similar users purchsed
+                                similar_user_items = matrix_norm[matrix_norm.index.isin(similar_users.index)].dropna(axis=1, how='all')
+                                
+                                # Remove the purchased items from suggestions
+                                similar_user_items.drop(picked_userid_purchsed.columns,axis=1, inplace=True, errors='ignore')
 
-                            st.header("Selected Item Details")
+                                # A dictionary to store item scores
+                                item_score = {}
 
-                            # Check if any item details have been saved in session_state
+                                # Loop through items
+                                for i in similar_user_items.columns:
+                                    # Get the ratings for movie i
+                                    item_rating = similar_user_items[i]
+                                    # Create a variable to store the score
+                                    total = 0
+                                    # Create a variable to store the number of scores
+                                    count = 0
+                                    # Loop through similar users
+                                    for u in similar_users.index:
+                                        # If the movie has rating
+                                        if pd.isna(item_rating[u]) == False:
+                                            # Score is the sum of user similarity score multiply by the movie rating
+                                            score = similar_users[u] * item_rating[u]
+                                            # Add the score to the total score for the movie so far
+                                            total += score
+                                            # Add 1 to the count
+                                            count +=1
+                                    # Get the average score for the item
+                                    item_score[i] = total / count
+
+                                # Convert dictionary to pandas dataframe
+                                item_score = pd.DataFrame(item_score.items(), columns=['name', 'item_score'])
+                                    
+                                # Sort the movies by score
+                                ranked_item_score = item_score.sort_values(by='item_score', ascending=False)
+
+                                # Select top m movies
+                                m = 10
+                                suggestions = ranked_item_score.head(m)
+
+                                no_of_col = 4
+                                recommend_count = suggestions.shape[0]
+
+                                for i in range(0, recommend_count, no_of_col):
+                                    j = min(i + no_of_col, recommend_count)
+                                    items_in_row = suggestions[i:j]  # Assuming suggestions is a DataFrame
+
+                                    cols = st.columns(no_of_col)
+                                    for col_index, (_, row) in enumerate(items_in_row.iterrows()):
+                                        with cols[col_index]:
+                                            item_name = row['name']
+                                            item_image = get_item_img(item_name)
+
+                                            if item_image is not None and item_image[0] is not None:
+                                                st.image(
+                                                    item_image[0],
+                                                    caption=f"{item_name[:37] + '...' if len(item_name) > 15 else item_name}",
+                                                    use_column_width=True
+                                                )
+
+                                            if st.button(f"View", key=f"view_button_{i}_{col_index}"):  # Use a unique key
+                                                item_details = get_item_details(item_name)
+                                                st.session_state.session_state['selected_item'] = {
+                                                    'name': item_name,
+                                                    'image': item_image[0],
+                                                    'price': item_details[0],
+                                                    'brand': item_details[1],
+                                                    'color1': item_details[2],
+                                                    'color2': item_details[3]
+                                                }
+                                # Check if any item details have been saved in session_state
                             if 'selected_item' in st.session_state.session_state:
+                                st.header("Selected Item Details")
                                 selected_item = st.session_state.session_state['selected_item']
                                 col1, col2 = st.columns([2, 3])  
-                               
+                            
                                 col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
 
                                 col2.markdown(f"**<span style=' font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
@@ -681,18 +714,14 @@ def main():
                                 col2.markdown(f"<span style='margin: 40px;'>  </span>" , unsafe_allow_html=True)
                                 quantity = col2.number_input('Quantity', min_value=1, value=1, )
                                 total_price = selected_item['price'] * quantity
-                               
+                            
                                 if col2.button("Add to cart"):
                                     add_item_cart(username,cleaned_string,selected_item['name'],selected_item['price'],total_price,quantity )
 
                                 
                             else:
                                 st.write("No item selected. Click 'View' on an item to see its details.")
-                        
-                            #convert data types
 
-
-                             
 
                     elif user_type == "Admin":
                         st.subheader("Logged In")

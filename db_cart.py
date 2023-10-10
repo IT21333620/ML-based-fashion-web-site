@@ -192,21 +192,50 @@ def create_payment_details_table():
 
     conn.commit()
 
-def export_to_csv():
-    conn = sqlite3.connect('cart.db')
+
+def export_item_to_csv():
+    conn = sqlite3.connect('data.db')
     c = conn.cursor()
 
-    c.execute('SELECT * FROM purchase_history')
+    c.execute('SELECT category,subcategory,name,price,colour1,colour2,photo FROM itemstable ')
     data = c.fetchall()
 
-    file_path = os.path.join('data', 'payment_history.csv')
+    file_path = os.path.join('data', 'Avilableitems.csv')
 
-    with open(file_path, 'w', newline='') as file:
+    with open(file_path, 'w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
-        writer.writerow(['id', 'user_name', 'category', 'item_name', 'price', 'total_price','quantity','purchase_date'])
+        writer.writerow(['category', 'subcategory', 'name','price','colour1','colour2','photo'])
         writer.writerows(data)
 
     conn.close()
+
+def get_item_img(itemname):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+
+    c.execute('SELECT photo FROM itemstable where name =? ',(itemname,))
+    data = c.fetchone()
+    conn.close()
+    return data
+
+def get_item_details(itemname):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+
+    c.execute('SELECT price,brand,colour1,colour2 FROM itemstable where name =? ',(itemname,))
+    data = c.fetchone()
+    conn.close()
+    return data
+
+def getUserId(username):
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+
+    c.execute('SELECT UserID FROM item_rating where UserName =? ',(username,))
+    data = c.fetchone()
+    id = int(data[0])
+    conn.close
+    return int(id)
 
 def add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date):
     conn = sqlite3.connect('cart.db')  # Connect to your database
