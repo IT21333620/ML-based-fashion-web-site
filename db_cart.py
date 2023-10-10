@@ -100,7 +100,6 @@ def calculate_cart_subtotal(username):
 def create_payment_details_table():
     conn = sqlite3.connect('cart.db')  # Connect to your database
     c = conn.cursor()
-
     c.execute('''
               CREATE TABLE IF NOT EXISTS payment_details
               (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,20 +109,17 @@ def create_payment_details_table():
                cvv INTEGER,
                purchase_date DATE)
               ''')
-
     conn.commit()
 
 def add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date):
     conn = sqlite3.connect('cart.db')  # Connect to your database
     c = conn.cursor()
     create_payment_details_table()
-
     c.execute('''
     INSERT INTO payment_details
     (account_number, expiration_month, expiration_year, cvv, purchase_date)
     VALUES (?, ?, ?, ?, ?)
     ''', (account_number, expiration_month, expiration_year, cvv, purchase_date))
-
     conn.commit()
 
 # Define a function to create the purchase history table
@@ -165,4 +161,13 @@ def delete_purchase_hisory(username):
     """
     c.execute("DELETE FROM purchase_history WHERE user_name=?", (username,))
     conn.commit()
-    
+
+#search purchase history function
+def search_purchase_history(username, search_keyword):
+    conn = sqlite3.connect('cart.db')
+    c = conn.cursor()
+    # Query to retrieve purchase history records that match the search keyword
+    c.execute("SELECT * FROM purchase_history WHERE user_name = ? AND (purchase_date LIKE ?)",
+              (username, f"%{search_keyword}%"))
+    purchase_history = c.fetchall()    
+    return purchase_history

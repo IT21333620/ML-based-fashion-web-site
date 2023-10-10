@@ -43,6 +43,13 @@ def delete_item(name):
 	c.execute('DELETE FROM itemstable WHERE name="{}"'.format(name))
 	conn.commit()
 
+def get_item_image(name):
+    c.execute('SELECT photo FROM itemstable WHERE name = ?', (name,))
+    image_url = c.fetchone()
+    if image_url:
+        return image_url[0]
+    else:
+        return None
 
 # Login/Signup
 
