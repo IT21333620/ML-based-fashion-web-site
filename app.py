@@ -55,7 +55,7 @@ def main():
     """A Simple CRUD Blog"""
     html_temp = """
         <div style="background-color:{};padding:10px;border-radius:10px">
-        <h1 style="color:{};text-align:center;">The Fashion Store</h1>
+        <h1 style="color:{};text-align:center;">Stylux Fashion Store</h1>
         </div>
         """
     st.markdown(html_temp.format('royalblue', 'white'), unsafe_allow_html=True)
@@ -64,11 +64,17 @@ def main():
     choice = st.sidebar.selectbox("Menu", menu)
 
     if choice == "Home":
+        st.write("")
+        st.write("")
         st.subheader("Home")
 
+        st.image('Home_image.png', use_column_width=True)
+        st.write("")
+        st.write("")
+
         defi_para = """
-            <div style="background: linear-gradient(to bottom right, #FFA500, #FF6347); color: #000; padding: 20px; border-radius: 10px; font-weight: bolder;">
-                <h2>About Fashion  Store</h2>
+            <div style="background: linear-gradient(to bottom right, #FFA500, #FF6347); color: #000; padding: 20px; padding-top: 5px; border-radius: 10px; font-weight: bolder;">
+                <h2>About Our Site</h2>
                 <p>This web app is meticulously crafted for fashion retail store, offering an immersive and delightful shopping experience for users.
                   Explore our extensive collection of high-quality fashion products, from clothing to accessories, 
                   and effortlessly make purchases online. Our innovative Smart Suggestions feature harnesses 
