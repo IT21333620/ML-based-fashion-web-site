@@ -29,15 +29,12 @@ if 'session_state' not in st.session_state:
 if 'selected_item' not in st.session_state:
     st.session_state['selected_item'] = {}
 
-#import function file 
-from suggestion_fn import *
-
 #global variables 
 global df_sugg
 
 # DB
-from db_fxns import *
-from db_cart import *
+from DB_Functions.db_fxns import *
+from DB_Functions.db_cart import *
 
 # Security
 # passlib, hashlib, bcrypt, scrypt
@@ -68,7 +65,7 @@ def main():
         st.write("")
         st.subheader("Home")
 
-        st.image('Home_image.png', use_column_width=True)
+        st.image('img/Home_image.png', use_column_width=True)
         st.write("")
         st.write("")
 
@@ -567,6 +564,30 @@ def main():
                                                         'color2':row[1]['variation_1_color']   
                                                         
                                                     }
+                                    
+                                    if 'selected_item' in st.session_state.session_state:
+                                        st.header("Selected Item Details")
+                                        selected_item = st.session_state.session_state['selected_item']
+                                        col1, col2 = st.columns([2, 3])  
+                                    
+                                        col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
+
+                                        col2.markdown(f"**<span style=' font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
+                                        col2.markdown(f"<span style=' font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
+                                        col2.markdown(f"<span style=' font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
+                                        col2.markdown(f"<span style=' font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
+                                        col2.markdown(f"<span style='margin: 40px;'>  </span>" , unsafe_allow_html=True)
+                                        quantity = col2.number_input('Quantity', min_value=1, value=1, )
+                                        total_price = selected_item['price'] * quantity
+
+                                        if col2.button("Add to cart"):
+                                            add_item_cart(username,cleaned_string,selected_item['name'],selected_item['price'],total_price,quantity )
+                                            st.success("Item Added to cart")
+
+                                
+                                        
+                                    else:
+                                        st.write("No item selected. Click 'View' on an item to see its details.")
                                             
                                 else:
                                     st.write("No items in the cart.") 
@@ -711,24 +732,21 @@ def main():
                                                     'color2': item_details[3]
                                                 }
                                 # Check if any item details have been saved in session_state
-                            if 'selected_item' in st.session_state.session_state:
-                                st.header("Selected Item Details")
-                                selected_item = st.session_state.session_state['selected_item']
-                                col1, col2 = st.columns([2, 3])  
-                            
-                                col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
+                                if 'selected_item' in st.session_state.session_state:
+                                    st.header("Selected Item Details")
+                                    selected_item = st.session_state.session_state['selected_item']
+                                    col1, col2 = st.columns([2, 3])  
+                                
+                                    col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
 
-                                col2.markdown(f"**<span style=' font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style=' font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style=' font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style=' font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style='margin: 40px;'>  </span>" , unsafe_allow_html=True)
-                                quantity = col2.number_input('Quantity', min_value=1, value=1, )
-                                total_price = selected_item['price'] * quantity
+                                    col2.markdown(f"**<span style=' font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
+                                    col2.markdown(f"<span style=' font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
+                                    col2.markdown(f"<span style=' font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
+                                    col2.markdown(f"<span style=' font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
+                                    col2.markdown(f"<span style='margin: 40px;'>  </span>" , unsafe_allow_html=True)
+                                    quantity = col2.number_input('Quantity', min_value=1, value=1, )
+                                    total_price = selected_item['price'] * quantity
                             
-                                if col2.button("Add to cart"):
-                                    add_item_cart(username,cleaned_string,selected_item['name'],selected_item['price'],total_price,quantity )
-
                                 
                             else:
                                 st.write("No item selected. Click 'View' on an item to see its details.")
