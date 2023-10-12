@@ -49,6 +49,13 @@ def edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,n
 def delete_item(name):
 	c.execute('DELETE FROM itemstable WHERE name="{}"'.format(name))
 	conn.commit()
+     
+def get_item_image(item_name):
+    c = conn.cursor()
+    item_name = str(item_name)  # Convert item_name to string
+    c.execute('SELECT photo FROM itemstable WHERE name = ?', (item_name,))
+    result = c.fetchone()
+    return result[0] if result else None
 
 
 # Login/Signup
@@ -184,3 +191,19 @@ def get_columns_pdf():
     c.execute('SELECT name, quantity, price FROM itemstable')
     data = c.fetchall()
     return data
+
+def get_user_details(username):
+    c.execute('SELECT * FROM userstable WHERE username = ?', (username,))
+    user_data = c.fetchone()
+    if user_data:
+        user_details = {
+            'name': user_data[0],
+            'age': user_data[1],
+            'gender': user_data[2],
+            'username': user_data[3],
+            'password': user_data[4],
+            'usertype': user_data[5]
+        }
+        return user_details
+    else:
+        return None
