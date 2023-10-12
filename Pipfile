@@ -13,6 +13,7 @@ numpy = "*"
 joblib = "*"
 scikit-learn = "*"
 scikit-surprise = "*"
+reportlab = "*"
 
 [dev-packages]
 
