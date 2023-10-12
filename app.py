@@ -308,23 +308,33 @@ def main():
                                 cart_df = pd.DataFrame(cart_items, columns=["Username", "Item Name", "Category" ,"Total Price", "Quantity"])
                                 st.write("**Cart Items:**")
         
-                                # Iterate through the cart items and display them individually
-                                for index, row in cart_df.iterrows():
-                                    st.write(f"**Item Name:** {row['Item Name']}")
-                                    st.write(f"**Category:** {row['Category']}")
-                                    st.write(f"**Total Price:** ${row['Total Price']:.2f}")
-                                    # Add a number input field for quantity
-                                    new_quantity = st.slider('Quantity:', min_value=1, max_value=10, value=row['Quantity'], key=f'quantity_{index}')
-                                    # If the quantity is updated, update the DataFrame
-                                    if new_quantity != row['Quantity']:
-                                        cart_df.at[index, 'Quantity'] = new_quantity
-                                        # Update cart with new quantities
-                                        update_cart_quantities(username, cart_df)
-                                    # Add a button to remove the item from the cart
-                                    if st.button(f'Remove : {row["Item Name"]}', key=f'remove_{index}'):
-                                        item_name = row['Item Name']
-                                        delete_item_from_cart(username, item_name)
-                                    st.write("---")  # Add a separator between items
+                                with st.container():  
+                                    # Iterate through the cart items and display them individually
+                                    for index, row in cart_df.iterrows():
+                                        col1, col2 = st.columns(2)
+                                        with col1:
+                                            # Display the image of the item in the cart
+                                            item_image = get_item_image(row["Item Name"])  # Add a function to get the item image
+                                            if item_image:
+                                                st.image(item_image, caption=row["Item Name"], use_column_width=True)
+                                            else:
+                                                st.write("No image available")
+                                        with col2:
+                                            st.write(f"**Item Name:** {row['Item Name']}")
+                                            st.write(f"**Category:** {row['Category']}")
+                                            st.write(f"**Total Price:** ${row['Total Price']:.2f}")
+                                            # Add a number input field for quantity
+                                            new_quantity = st.slider('Quantity:', min_value=1, max_value=10, value=row['Quantity'], key=f'quantity_{index}')
+                                            # If the quantity is updated, update the DataFrame
+                                            if new_quantity != row['Quantity']:
+                                                cart_df.at[index, 'Quantity'] = new_quantity
+                                                # Update cart with new quantities
+                                                update_cart_quantities(username, cart_df)
+                                            # Add a button to remove the item from the cart
+                                            if st.button(f'Remove Item',  key=f'remove_{index}'):
+                                                item_name = row['Item Name']
+                                                delete_item_from_cart(username, item_name)
+                                        st.write("---")  # Add a separator between items
 
                                 # Calculate and display the subtotal
                                 subtotal = calculate_cart_subtotal(username)
@@ -337,13 +347,13 @@ def main():
                                 st.write("Your cart is empty.")
 
                             with st.form('Payment Detalis'):
-                                account_number = st.number_input('Account Number', 0,)
+                                account_number = st.number_input('Card Number', 0)
                                 col1, col2 = st.columns(2)  # Create two columns here
                                 with col1:
-                                    expiration_month = st.selectbox('Experation Date', range(1, 13))
+                                    expiration_month = st.selectbox('Experation Month', range(1, 13))
                                 with col2:
-                                    expiration_year = st.selectbox('Experation Month', range(2023, 2030))
-                                cvv = st.number_input('cvv', min_value=100)
+                                    expiration_year = st.selectbox('Experation Year', range(2023, 2030))
+                                cvv = st.number_input('cvv', min_value=100, max_value=999)
 
                                 # Add a button to make the purchase
                                 if st.form_submit_button('Make Purchase'):
@@ -352,27 +362,11 @@ def main():
                                     add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
                                     # Clear the form fields after successful submission
                                     account_number, expiration_month, expiration_year, cvv = '', None, None, None
-                                    cart_items = get_cart_items(username)
 
                                     if make_purchase(username):
                                         add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
-                                        # Process each item in the cart
-                                        for cart_item in cart_items:
-                                            item_name = cart_item[0]
-                                            quantity = cart_item[1] 
-
-                                            # Find the corresponding item in itemstable
-                                            item = get_item_by_name(item_name)
-                                            # Calculate the updated quantity
-                                            updated_quantity = item['quantity'] - quantity
-
-                                            # Update the quantity in itemstable
-                                            update_item_quantity(item_name, updated_quantity)
-
-                                            # Remove the item from the cart
-                                            remove_item_from_cart(username, item_name)
-
                                         conn.commit()
+
 
                                         st.success("Your purchase has been completed.")
                                         # st.experimental_rerun()  # Refresh the page to reflect the updated cart
@@ -385,19 +379,80 @@ def main():
                                 st.success("Your cart has been cleared.")
                                 st.experimental_rerun()
 
+                            if st.button('Generate Invoice'):
+
+                                def generate_invoice(user_details, cart_items, total_amount,):
+                                    buffer = BytesIO()
+                                    p = canvas.Canvas(buffer, pagesize=letter)
+    
+                                    # Add content to the PDF
+                                    p.setFont("Helvetica-Bold", 32)
+                                    p.drawString(100, 750, "Invoice")
+    
+                                    # Add user details
+                                    p.setFont("Helvetica", 12)
+                                    p.drawString(100, 700, f"Name: {user_details['name']}")
+                                    p.drawString(100, 680, f"Age: {user_details['age']}")
+                                    p.drawString(100, 660, f"Gender: {user_details['gender']}")
+    
+                                    # Add cart items
+                                    y_position = 620
+                                    for item in cart_items:
+                                        p.drawString(100, y_position, f"Item: {item[1]}, Quantity: {item[4]}, Price: {item[3]}")  # Use integer indices
+                                        y_position -= 20
+    
+                                    # Add total amount
+                                    p.drawString(100, y_position, f"Total Amount: {total_amount}")
+    
+                                    # Save the PDF to the buffer
+                                    p.showPage()
+                                    p.save()
+    
+                                    buffer.seek(0)
+                                    return buffer
+
+                                user_details = get_user_details(username)
+                                cart_items = view_all_items(username)
+                                total_amount = calculate_cart_subtotal(username)
+                                invoice_pdf = generate_invoice(user_details, cart_items, total_amount)
+
+                                # Offer the invoice for download
+                                st.download_button(
+                                    label="Download Invoice",
+                                    data=invoice_pdf,
+                                    file_name="invoice.pdf",
+                                    key='invoice_download_button'
+                                )
+
                         elif task == "View Purchase History":
                             st.subheader("View Purchase History")
 
                             # Call the view_purchase_history function to retrieve purchase history for the user
                             purchase_history = view_purchase_history(username)
-                            
 
                             if purchase_history:
+
+                                # Add a text input field for the search keyword
+                                search_keyword = st.text_input("Search Purchase History")
+                                # Add a button to trigger the search
+                                if st.button("Search"):
+                                    # Call the search_purchase_history function
+                                    purchase_history = search_purchase_history(username, search_keyword)
+                                    # Display the search results
+                                    if purchase_history:
+                                        st.write("Search Results:")
+                                    else:
+                                        st.write("No matching purchase history records found.")
+
+
                                 # Convert the purchase history to a DataFrame for better display
                                 purchase_df = pd.DataFrame(purchase_history, columns=["ID", "User Name", "Category", "Item Name", "Price", "Total Price", "Quantity", "Purchase Date"])
 
                                 # Convert 'Purchase Date' to datetime and round it to the nearest minute
                                 purchase_df['Purchase Date'] = pd.to_datetime(purchase_df['Purchase Date']).dt.round('min')
+
+                                # Add timezone information (assuming you want to set it to IST)
+                                purchase_df['Purchase Date'] = purchase_df['Purchase Date'].dt.tz_localize('Asia/Kolkata')
 
                                 # Group purchases by purchase date and time
                                 grouped_purchases = purchase_df.groupby('Purchase Date')
@@ -410,26 +465,39 @@ def main():
                                         # Convert to list of dictionaries
                                         purchases_list = display_df.to_dict('records')
                                         for purchase in purchases_list:
-                                            st.write(f"**User Name:** {purchase['User Name']}")
-                                            st.write(f"**Item Name:** {purchase['Item Name']}")
-                                            st.write(f"**Category:** {purchase['Category']}")
-                                            st.write(f"**Quantity:** {purchase['Quantity']}")
-                                            st.write(f"**Total Price:** {purchase['Total Price']}")
+                                            col1,col2 = st.columns(2) 
+                                            with col1:
+                                                # Display the image of the item in the cart
+                                                item_image = get_item_image(purchase["Item Name"])  # Add a function to get the item image
+                                                if item_image:
+                                                    st.image(item_image, caption=purchase["Item Name"], use_column_width=True)
+                                                else:
+                                                    st.write("No image available")
+                                            with col2:
+                                                st.write(f"**User Name:** {purchase['User Name']}")
+                                                st.write(f"**Item Name:** {purchase['Item Name']}")
+                                                st.write(f"**Category:** {purchase['Category']}")
+                                                st.write(f"**Quantity:** {purchase['Quantity']}")
+                                                st.write(f"**Total Price:** {purchase['Total Price']}")
 
-                                            # Add a rating input field for each item
-                                            rating = st.slider(label='Rate this item (1-10)', min_value=1, max_value=10, key=f"{purchase['Item Name']}_{purchase_time}_{purchase['Total Price']}_rating")  # Updated key
+                                                # Add a rating input field for each item
+                                                rating = st.slider(label='Rate this item (1-10)', min_value=1, max_value=10, key=f"{purchase['Item Name']}_{purchase_time}_{purchase['Total Price']}_rating")  # Updated key
 
-                                            # Save the rating in the item_rating table
-                                            if st.button(f'Submit Rating : for {purchase["Item Name"]}_{purchase["Total Price"]}_{purchase_time}'):
-                                                create_item_rating_table()
-                                                save_item_rating(username, purchase['Item Name'], rating)
-                                                st.success("Thank you for rating our product.")
+                                                # Save the rating in the item_rating table
+                                                if st.button(f'Submit Rating', key=f'{purchase["Item Name"]}_{purchase["Total Price"]}_{purchase_time}'):
+                                                    create_item_rating_table()
+                                                    save_item_rating(username, purchase['Item Name'], rating)
+                                                    st.success("Thank you for rating our product.")
 
                                             st.write("---")
 
-                            else:
-                                st.write("No purchase history available for this user.")
+                                if st.button('Clear Purchase History'):
+                                    delete_purchase_hisory(username)
+                                    st.success("Purchase history has been cleared.")
+                                    st.experimental_rerun()
 
+                            else:
+                                st.write("No purchase history available for this user.")
 
                         if task == "Smart Suggestions":
                             #########################################################################

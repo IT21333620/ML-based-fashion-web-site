@@ -176,21 +176,22 @@ def delete_purchase_hisory(username):
     Delete all items in the purchase_hisory for a specific user.
     """
     c.execute("DELETE FROM purchase_history WHERE user_name=?", (username,))
+    conn.commit()
+
 def create_payment_details_table():
     conn = sqlite3.connect('cart.db')  # Connect to your database
     c = conn.cursor()
 
-    c.execute('''
-              CREATE TABLE IF NOT EXISTS payment_details
-              (id INTEGER PRIMARY KEY AUTOINCREMENT,
-               account_number TEXT,
-               expiration_month INTEGER,
-               expiration_year INTEGER,
-               cvv INTEGER,
-               purchase_date DATE)
-              ''')
-
-    conn.commit()
+def search_purchase_history(username, search_keyword):
+    conn = sqlite3.connect('cart.db')
+    c = conn.cursor()
+    # Query to retrieve purchase history records that match the search keyword
+    c.execute("SELECT * FROM purchase_history WHERE user_name = ? AND (purchase_date LIKE ?)",
+              (username, f"%{search_keyword}%"))
+    purchase_history = c.fetchall()
+    # Close the database connection
+    conn.close()
+    return purchase_history
 
 def export_to_csv():
     conn = sqlite3.connect('cart.db')
