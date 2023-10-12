@@ -75,10 +75,15 @@ def main():
         defi_para = """
             <div style="background: linear-gradient(to bottom right, #FFA500, #FF6347); color: #000; padding: 20px; padding-top: 5px; border-radius: 10px; font-weight: bolder;">
                 <h2>About Our Site</h2>
-                <p>This web app is meticulously crafted for fashion retail store, offering an immersive and delightful shopping experience for users.
-                  Explore our extensive collection of high-quality fashion products, from clothing to accessories, 
-                  and effortlessly make purchases online. Our innovative Smart Suggestions feature harnesses 
-                  the power of AI to recommend stylish dress combinations that perfectly match your budget and taste.</p>
+                <p>Welcome to Stylux Fashion Store, where style meets sophistication, and your fashion dreams come to life! We're your go-to 
+                destination for the latest trends offering an extensive collection of clothing for men, women, and children. At Stylux, we 
+                understand that fashion is a powerful form of self-expression, and we're here to empower you to showcase your unique style. 
+                Our carefully curated selection of apparel spans the spectrum from casual to formal, so you'll find the perfect outfit for any occasion.<br><br>
+                What makes our site unique is the integration of smart suggestions. Our innovative Smart Suggestions feature harnesses 
+                the power of AI to recommend stylish dress combinations that perfectly match your taste.Thank you for choosing Stylux Fashion Store as your 
+                fashion destination. We look forward to being a part of your style journey, helping you express your unique fashion identity, and ensuring 
+                that you always look your best. Happy shopping!
+                </p>
             </div>
         """
 
@@ -1115,16 +1120,15 @@ def main():
 
                                     
                                     st.write(f'Quantity in Inventory: {item_quantity} Units')
-                                    st.write("")
 
                                     st.write(f'Total Predicted Sales: {forecasted_total_sales} Units')
-                                    st.write("")
                                     if forecasted_total_sales >= item_quantity:
                                         st.write('Status: Out of Stock')
                                         create_order_table()
                                         add_item_order(item_name,forecasted_total_sales)
                                     else:
                                         st.write('Status: In Stock')
+                                    
                              
                         elif task == "Place Order":
                             st.title('Place an order')
@@ -1144,7 +1148,7 @@ def main():
                             else:
                                 filtered_df = df
 
-                            item_name = st.selectbox('Select an item for sales forecasting:', filtered_df['item_name'].unique())
+                            item_name = st.selectbox('Select an item for Ordering:', filtered_df['item_name'].unique())
 
                             item_quantity = st.number_input("Item Quantity", min_value=1)
 
