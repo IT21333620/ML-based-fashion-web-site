@@ -1,4 +1,6 @@
 # DB
+import csv
+import os
 import sqlite3
 conn = sqlite3.connect('data.db',check_same_thread=False)
 c = conn.cursor()
@@ -47,6 +49,13 @@ def edit_item(newitem_category,newitem_sub_category,newitem_name,newitem_price,n
 def delete_item(name):
 	c.execute('DELETE FROM itemstable WHERE name="{}"'.format(name))
 	conn.commit()
+     
+def get_item_image(item_name):
+    c = conn.cursor()
+    item_name = str(item_name)  # Convert item_name to string
+    c.execute('SELECT photo FROM itemstable WHERE name = ?', (item_name,))
+    result = c.fetchone()
+    return result[0] if result else None
 
 
 # Login/Signup
@@ -109,6 +118,26 @@ def save_item_rating(username, item_name, rating):
         # Insert the rating into the item_rating table
         cursor.execute("INSERT INTO item_rating (UserID, UserName, ItemName, Rating) VALUES (?, ?, ?, ?)",
                        (get_user_id(username), username, item_name, rating))
+        cursor.execute("SELECT UserID, UserName, ItemName, Rating FROM item_rating ORDER BY RowID DESC LIMIT 1")
+        last_updated_data = cursor.fetchone()
+        if last_updated_data:
+            # Construct the file path
+            file_path = os.path.join('data', 'rating.csv')
+
+            # Write data to the CSV file
+            if os.path.exists(file_path):
+                # Read existing data from the CSV file
+                with open(file_path, 'r', newline='', encoding='utf-8') as file:
+                    existing_data = list(csv.reader(file))
+
+                # Append the new data to the existing data
+                existing_data.append(last_updated_data)
+
+                # Write all data (including existing and new) back to the file
+                with open(file_path, 'w', newline='', encoding='utf-8') as file:
+                    writer = csv.writer(file)
+                    writer.writerows(existing_data)
+                    
         # Commit the changes
         conn.commit()
         return True  # Return True to indicate successful saving of rating
@@ -156,3 +185,25 @@ def update_item_quantity(item_name, updated_quantity):
         print(f"Successfully updated quantity for {item_name}")
     except sqlite3.Error as e:
         print(f"Error updating quantity for {item_name}: {str(e)}")
+
+#PDF generation related functions
+def get_columns_pdf():
+    c.execute('SELECT name, quantity, price FROM itemstable')
+    data = c.fetchall()
+    return data
+
+def get_user_details(username):
+    c.execute('SELECT * FROM userstable WHERE username = ?', (username,))
+    user_data = c.fetchone()
+    if user_data:
+        user_details = {
+            'name': user_data[0],
+            'age': user_data[1],
+            'gender': user_data[2],
+            'username': user_data[3],
+            'password': user_data[4],
+            'usertype': user_data[5]
+        }
+        return user_details
+    else:
+        return None

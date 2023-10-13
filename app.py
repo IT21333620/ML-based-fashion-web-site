@@ -17,19 +17,24 @@ from sklearn.preprocessing import LabelEncoder
 import math
 import sqlite3
 from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import scipy.stats
+# Visualization
+import seaborn as sns
 
 if 'session_state' not in st.session_state:
     st.session_state.session_state = {}
 
-#import function file 
-from suggestion_fn import *
+if 'selected_item' not in st.session_state:
+    st.session_state['selected_item'] = {}
 
 #global variables 
 global df_sugg
 
 # DB
-from db_fxns import *
-from db_cart import *
+from DB_Functions.db_fxns import *
+from DB_Functions.db_cart import *
 
 # Security
 # passlib, hashlib, bcrypt, scrypt
@@ -47,7 +52,7 @@ def main():
     """A Simple CRUD Blog"""
     html_temp = """
         <div style="background-color:{};padding:10px;border-radius:10px">
-        <h1 style="color:{};text-align:center;">The Fashion Store</h1>
+        <h1 style="color:{};text-align:center;">Stylux Fashion Store</h1>
         </div>
         """
     st.markdown(html_temp.format('royalblue', 'white'), unsafe_allow_html=True)
@@ -56,15 +61,26 @@ def main():
     choice = st.sidebar.selectbox("Menu", menu)
 
     if choice == "Home":
+        st.write("")
+        st.write("")
         st.subheader("Home")
 
+        st.image('img/Home_image.png', use_column_width=True)
+        st.write("")
+        st.write("")
+
         defi_para = """
-            <div style="background: linear-gradient(to bottom right, #FFA500, #FF6347); color: #000; padding: 20px; border-radius: 10px; font-weight: bolder;">
-                <h2>About Fashion  Store</h2>
-                <p>This web app is meticulously crafted for fashion retail store, offering an immersive and delightful shopping experience for users.
-                  Explore our extensive collection of high-quality fashion products, from clothing to accessories, 
-                  and effortlessly make purchases online. Our innovative Smart Suggestions feature harnesses 
-                  the power of AI to recommend stylish dress combinations that perfectly match your budget and taste.</p>
+            <div style="background: linear-gradient(to bottom right, #FFA500, #FF6347); color: #000; padding: 20px; padding-top: 5px; border-radius: 10px; font-weight: bolder;">
+                <h2>About Our Site</h2>
+                <p>Welcome to Stylux Fashion Store, where style meets sophistication, and your fashion dreams come to life! We're your go-to 
+                destination for the latest trends offering an extensive collection of clothing for men, women, and children. At Stylux, we 
+                understand that fashion is a powerful form of self-expression, and we're here to empower you to showcase your unique style. 
+                Our carefully curated selection of apparel spans the spectrum from casual to formal, so you'll find the perfect outfit for any occasion.<br><br>
+                What makes our site unique is the integration of smart suggestions. Our innovative Smart Suggestions feature harnesses 
+                the power of AI to recommend stylish dress combinations that perfectly match your taste.Thank you for choosing Stylux Fashion Store as your 
+                fashion destination. We look forward to being a part of your style journey, helping you express your unique fashion identity, and ensuring 
+                that you always look your best. Happy shopping!
+                </p>
             </div>
         """
 
@@ -120,29 +136,27 @@ def main():
                             task1 = st.selectbox("Select Category", ["Women's", "Men's", "Children's"])
                             if task1 == "Women's":
                                 df = pd.read_csv("data/women.csv")
-                                # Remove rows with null values in the specified columns
+                                #Remove rows with null values in the specified columns
                                 df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
 
                                 substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
 
-                                # Use boolean indexing to filter out rows containing the substring
+                                #Use boolean indexing to filter out rows containing the substring
                                 df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
 
                                 page_size = 24
                                 page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
 
-                                # Calculate the start and end indices for the current page
+                                
                                 start_index = (page_number - 1) * page_size
                                 end_index = start_index + page_size
 
-                                # Slice the dataset for the current page
+                                
                                 current_page_df = df[start_index:end_index]
 
-                                # Display the dataset with images for the current page
+                                
                                 st.subheader("Men's Clothing")
                                 st.write('**Products (Page {}):**'.format(page_number))
-
-                                # Create a Streamlit row to display items in a horizontal line
                                 cols = st.columns(4)
 
                                   
@@ -159,14 +173,14 @@ def main():
                                     
                                         st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
 
-                                        # Display the price below the image
+                                        #Displaying the price
                                         st.write(f"Price: ${row_data['current_price']:.2f}")
 
-                                        # Add an input field for quantity
+                                        #Get quantity
                                         quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
                                         total_price = row_data['current_price'] * quantity
 
-                                        # Add the "Add to Cart" button inside a custom container div
+                                        #Add to Cart
                                         with st.container():
                                             if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
                                                 create_cart_table()
@@ -176,35 +190,29 @@ def main():
                                             st.write("")
                                             st.write("")
 
-                                # Create a "Load More" button to fetch the next page
+                                
                                 if end_index < len(df):
                                     st.sidebar.button("Load More")
 
                             elif task1 == "Men's":
                                 df = pd.read_csv("data/men.csv")
-                                # Remove rows with null values in the specified columns
+                                #Remove rows with null values in the specified columns
                                 df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
 
                                 substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
 
-                                # Use boolean indexing to filter out rows containing the substring
+                                #Use boolean indexing to filter out rows containing the substring
                                 df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
 
                                 page_size = 24
                                 page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
-
-                                # Calculate the start and end indices for the current page
                                 start_index = (page_number - 1) * page_size
                                 end_index = start_index + page_size
-
-                                # Slice the dataset for the current page
                                 current_page_df = df[start_index:end_index]
 
-                                # Display the dataset with images for the current page
                                 st.subheader("Men's Clothing")
-                                st.write('**Products (Page {}):**'.format(page_number))
 
-                                # Create a Streamlit row to display items in a horizontal line
+                                st.write('**Products (Page {}):**'.format(page_number))
                                 cols = st.columns(4)
 
                                   
@@ -221,14 +229,14 @@ def main():
                                     
                                         st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
 
-                                        # Display the price below the image
+                                        #Displaying the price
                                         st.write(f"Price: ${row_data['current_price']:.2f}")
 
-                                        # Add an input field for quantity
+                                        #Get quantity
                                         quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
                                         total_price = row_data['current_price'] * quantity
 
-                                        # Add the "Add to Cart" button inside a custom container div
+                                        #Add to Cart
                                         with st.container():
                                             if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
                                                 create_cart_table()
@@ -238,35 +246,33 @@ def main():
                                             st.write("")
                                             st.write("")
 
-                                # Create a "Load More" button to fetch the next page
+                                
                                 if end_index < len(df):
                                     st.sidebar.button("Load More")
 
                             elif task1 == "Children's":
                                 df = pd.read_csv("data/kids.csv")
-                                # Remove rows with null values in the specified columns
+                                #Remove rows with null values in the specified columns
                                 df = df.dropna(subset=["name", "variation_0_image", "current_price", "subcategory"])
 
                                 substring_to_remove = "https://imgaz1.chiccdn.com/thumb/view/oaupload/ser1"
 
-                                # Use boolean indexing to filter out rows containing the substring
+                                #Use boolean indexing to filter out rows containing the substring
                                 df = df[~df['variation_0_image'].str.contains(substring_to_remove)]
 
                                 page_size = 24
                                 page_number = st.sidebar.number_input("Page Number", min_value=1, value=1)
 
-                                # Calculate the start and end indices for the current page
                                 start_index = (page_number - 1) * page_size
                                 end_index = start_index + page_size
 
-                                # Slice the dataset for the current page
+                                
                                 current_page_df = df[start_index:end_index]
 
-                                # Display the dataset with images for the current page
+                                
                                 st.subheader("Men's Clothing")
                                 st.write('**Products (Page {}):**'.format(page_number))
 
-                                # Create a Streamlit row to display items in a horizontal line
                                 cols = st.columns(4)
 
                                   
@@ -283,14 +289,14 @@ def main():
                                     
                                         st.markdown(f'<div style="min-height: {min_image_height}px;"></div>', unsafe_allow_html=True)
 
-                                        # Display the price below the image
+                                        #Displaying the price
                                         st.write(f"Price: ${row_data['current_price']:.2f}")
 
-                                        # Add an input field for quantity
+                                        #Get quantity
                                         quantity = st.number_input('Quantity', min_value=1, value=1, key=f'quantity_{row_index}')
                                         total_price = row_data['current_price'] * quantity
 
-                                        # Add the "Add to Cart" button inside a custom container div
+                                        #Add to Cart
                                         with st.container():
                                             if st.button(f'Add to Cart', key=f'add_button_{row_index}'):
                                                 create_cart_table()
@@ -300,7 +306,7 @@ def main():
                                             st.write("")
                                             st.write("")
 
-                                # Create a "Load More" button to fetch the next page
+                                
                                 if end_index < len(df):
                                     st.sidebar.button("Load More")
 
@@ -345,13 +351,13 @@ def main():
                                 st.write("Your cart is empty.")
 
                             with st.form('Payment Detalis'):
-                                account_number = st.number_input('Account Number', 0,)
+                                account_number = st.number_input('Card Number', 0)
                                 col1, col2 = st.columns(2)  # Create two columns here
                                 with col1:
-                                    expiration_month = st.selectbox('Experation Date', range(1, 13))
+                                    expiration_month = st.selectbox('Experation Month', range(1, 13))
                                 with col2:
-                                    expiration_year = st.selectbox('Experation Month', range(2023, 2030))
-                                cvv = st.number_input('cvv', min_value=100)
+                                    expiration_year = st.selectbox('Experation Year', range(2023, 2030))
+                                cvv = st.number_input('cvv', min_value=100, max_value=999)
 
                                 # Add a button to make the purchase
                                 if st.form_submit_button('Make Purchase'):
@@ -360,27 +366,11 @@ def main():
                                     add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
                                     # Clear the form fields after successful submission
                                     account_number, expiration_month, expiration_year, cvv = '', None, None, None
-                                    cart_items = get_cart_items(username)
 
                                     if make_purchase(username):
                                         add_payment_details(account_number, expiration_month, expiration_year, cvv, purchase_date)
-                                        # Process each item in the cart
-                                        for cart_item in cart_items:
-                                            item_name = cart_item[0]
-                                            quantity = cart_item[1] 
-
-                                            # Find the corresponding item in itemstable
-                                            item = get_item_by_name(item_name)
-                                            # Calculate the updated quantity
-                                            updated_quantity = item['quantity'] - quantity
-
-                                            # Update the quantity in itemstable
-                                            update_item_quantity(item_name, updated_quantity)
-
-                                            # Remove the item from the cart
-                                            remove_item_from_cart(username, item_name)
-
                                         conn.commit()
+
 
                                         st.success("Your purchase has been completed.")
                                         # st.experimental_rerun()  # Refresh the page to reflect the updated cart
@@ -393,19 +383,80 @@ def main():
                                 st.success("Your cart has been cleared.")
                                 st.experimental_rerun()
 
+                            if st.button('Generate Invoice'):
+
+                                def generate_invoice(user_details, cart_items, total_amount,):
+                                    buffer = BytesIO()
+                                    p = canvas.Canvas(buffer, pagesize=letter)
+    
+                                    # Add content to the PDF
+                                    p.setFont("Helvetica-Bold", 32)
+                                    p.drawString(100, 750, "Invoice")
+    
+                                    # Add user details
+                                    p.setFont("Helvetica", 12)
+                                    p.drawString(100, 700, f"Name: {user_details['name']}")
+                                    p.drawString(100, 680, f"Age: {user_details['age']}")
+                                    p.drawString(100, 660, f"Gender: {user_details['gender']}")
+    
+                                    # Add cart items
+                                    y_position = 620
+                                    for item in cart_items:
+                                        p.drawString(100, y_position, f"Item: {item[1]}, Quantity: {item[4]}, Price: {item[3]}")  # Use integer indices
+                                        y_position -= 20
+    
+                                    # Add total amount
+                                    p.drawString(100, y_position, f"Total Amount: {total_amount}")
+    
+                                    # Save the PDF to the buffer
+                                    p.showPage()
+                                    p.save()
+    
+                                    buffer.seek(0)
+                                    return buffer
+
+                                user_details = get_user_details(username)
+                                cart_items = view_all_items(username)
+                                total_amount = calculate_cart_subtotal(username)
+                                invoice_pdf = generate_invoice(user_details, cart_items, total_amount)
+
+                                # Offer the invoice for download
+                                st.download_button(
+                                    label="Download Invoice",
+                                    data=invoice_pdf,
+                                    file_name="invoice.pdf",
+                                    key='invoice_download_button'
+                                )
+
                         elif task == "View Purchase History":
                             st.subheader("View Purchase History")
 
                             # Call the view_purchase_history function to retrieve purchase history for the user
                             purchase_history = view_purchase_history(username)
-                            
 
                             if purchase_history:
+
+                                # Add a text input field for the search keyword
+                                search_keyword = st.text_input("Search Purchase History")
+                                # Add a button to trigger the search
+                                if st.button("Search"):
+                                    # Call the search_purchase_history function
+                                    purchase_history = search_purchase_history(username, search_keyword)
+                                    # Display the search results
+                                    if purchase_history:
+                                        st.write("Search Results:")
+                                    else:
+                                        st.write("No matching purchase history records found.")
+
+
                                 # Convert the purchase history to a DataFrame for better display
                                 purchase_df = pd.DataFrame(purchase_history, columns=["ID", "User Name", "Category", "Item Name", "Price", "Total Price", "Quantity", "Purchase Date"])
 
                                 # Convert 'Purchase Date' to datetime and round it to the nearest minute
                                 purchase_df['Purchase Date'] = pd.to_datetime(purchase_df['Purchase Date']).dt.round('min')
+
+                                # Add timezone information (assuming you want to set it to IST)
+                                purchase_df['Purchase Date'] = purchase_df['Purchase Date'].dt.tz_localize('Asia/Kolkata')
 
                                 # Group purchases by purchase date and time
                                 grouped_purchases = purchase_df.groupby('Purchase Date')
@@ -418,26 +469,39 @@ def main():
                                         # Convert to list of dictionaries
                                         purchases_list = display_df.to_dict('records')
                                         for purchase in purchases_list:
-                                            st.write(f"**User Name:** {purchase['User Name']}")
-                                            st.write(f"**Item Name:** {purchase['Item Name']}")
-                                            st.write(f"**Category:** {purchase['Category']}")
-                                            st.write(f"**Quantity:** {purchase['Quantity']}")
-                                            st.write(f"**Total Price:** {purchase['Total Price']}")
+                                            col1,col2 = st.columns(2) 
+                                            with col1:
+                                                # Display the image of the item in the cart
+                                                item_image = get_item_image(purchase["Item Name"])  # Add a function to get the item image
+                                                if item_image:
+                                                    st.image(item_image, caption=purchase["Item Name"], use_column_width=True)
+                                                else:
+                                                    st.write("No image available")
+                                            with col2:
+                                                st.write(f"**User Name:** {purchase['User Name']}")
+                                                st.write(f"**Item Name:** {purchase['Item Name']}")
+                                                st.write(f"**Category:** {purchase['Category']}")
+                                                st.write(f"**Quantity:** {purchase['Quantity']}")
+                                                st.write(f"**Total Price:** {purchase['Total Price']}")
 
-                                            # Add a rating input field for each item
-                                            rating = st.slider(label='Rate this item (1-10)', min_value=1, max_value=10, key=f"{purchase['Item Name']}_{purchase_time}_{purchase['Total Price']}_rating")  # Updated key
+                                                # Add a rating input field for each item
+                                                rating = st.slider(label='Rate this item (1-10)', min_value=1, max_value=10, key=f"{purchase['Item Name']}_{purchase_time}_{purchase['Total Price']}_rating")  # Updated key
 
-                                            # Save the rating in the item_rating table
-                                            if st.button(f'Submit Rating : for {purchase["Item Name"]}_{purchase["Total Price"]}_{purchase_time}'):
-                                                create_item_rating_table()
-                                                save_item_rating(username, purchase['Item Name'], rating)
-                                                st.success("Thank you for rating our product.")
+                                                # Save the rating in the item_rating table
+                                                if st.button(f'Submit Rating', key=f'{purchase["Item Name"]}_{purchase["Total Price"]}_{purchase_time}'):
+                                                    create_item_rating_table()
+                                                    save_item_rating(username, purchase['Item Name'], rating)
+                                                    st.success("Thank you for rating our product.")
 
                                             st.write("---")
 
-                            else:
-                                st.write("No purchase history available for this user.")
+                                if st.button('Clear Purchase History'):
+                                    delete_purchase_hisory(username)
+                                    st.success("Purchase history has been cleared.")
+                                    st.experimental_rerun()
 
+                            else:
+                                st.write("No purchase history available for this user.")
 
                         if task == "Smart Suggestions":
                             #########################################################################
@@ -558,7 +622,31 @@ def main():
                                                         'color2':row[1]['variation_1_color']   
                                                         
                                                     }
+                                    
+                                    if 'selected_item' in st.session_state.session_state:
+                                        st.header("Selected Item Details")
+                                        selected_item = st.session_state.session_state['selected_item']
+                                        col1, col2 = st.columns([2, 3])  
+                                    
+                                        col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
 
+                                        col2.markdown(f"**<span style=' font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
+                                        col2.markdown(f"<span style=' font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
+                                        col2.markdown(f"<span style=' font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
+                                        col2.markdown(f"<span style=' font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
+                                        col2.markdown(f"<span style='margin: 40px;'>  </span>" , unsafe_allow_html=True)
+                                        quantity = col2.number_input('Quantity', min_value=1, value=1, )
+                                        total_price = selected_item['price'] * quantity
+
+                                        if col2.button("Add to cart"):
+                                            add_item_cart(username,cleaned_string,selected_item['name'],selected_item['price'],total_price,quantity )
+                                            st.success("Item Added to cart")
+
+                                
+                                        
+                                    else:
+                                        st.write("No item selected. Click 'View' on an item to see its details.")
+                                            
                                 else:
                                     st.write("No items in the cart.") 
 
@@ -566,342 +654,355 @@ def main():
                             elif suggestion_type == "User Base":
                                 st.write("User based")
 
-                                if st.button("Don't press"):
-                                    export_to_csv()
+
+                                    
+                                export_item_to_csv()
+                                    
+
+                                ratings = pd.read_csv("data/rating.csv",encoding='utf-8')
                                 
-                                # Preprocess the data
-                                def preprocess_data(data):
-                                    user_items = defaultdict(list)
-                                    for row in data:
-                                        _,user_name,  _, item_name, _, _, _, _ = row
-                                        user_items[user_name].append(item_name)
-                                    return user_items
-
-                                #Build recommendation model
-                                def build_recommendation_model(user_items):
-                                    all_items = set()
-                                    for items in user_items.values():
-                                        all_items.update(items)
-
-                                    item_to_index = {item: i for i, item in enumerate(all_items)}
-
-                                    user_item_matrix = []
-                                    for user, items in user_items.items():
-                                        user_vector = [0] * len(all_items)
-                                        for item in items:
-                                            user_vector[item_to_index[item]] = 1
-                                        user_item_matrix.append(user_vector)
-
-                                    user_item_matrix = np.array(user_item_matrix)
-
-                                    similarity_matrix = cosine_similarity(user_item_matrix, user_item_matrix)
-
-                                    return similarity_matrix, item_to_index,user_item_matrix
-
-                                #Generate recommendations for a specific user
-                                def get_recommendations(user_id, user_items, similarity_matrix, item_to_index,user_item_matrix):
-                                    user_index = list(user_items.keys()).index(user_id)
-                                    user_similarities = similarity_matrix[user_index]
-                                    similar_users_indices = user_similarities.argsort()[::-1][1:]  
-
-                                    recommendations = set()
-                                    for idx in similar_users_indices:
-                                        for item_idx, val in enumerate(user_item_matrix[idx]):
-                                            if val == 1 and item_idx not in user_item_matrix[user_index]:
-                                                recommendations.add(item_idx)
-
-                                    recommended_items = [item for item, idx in item_to_index.items() if idx in recommendations]
-
-                                    return recommended_items
-
-
+                                items = pd.read_csv("data/Avilableitems.csv")
                                 
-                                def get_recommendation_details(recommendations):
-                                    details = []
-                                    for item_idx in recommendations:
-                                        # Get item details from the corresponding CSV file
-                                        category = "Men's"  # Assuming it's Men's category
-                                        if category == "Men's":
-                                            df_sugg = pd.read_csv("data/men.csv")
-                                        elif category == "Women's":
-                                            df_sugg = pd.read_csv("data/women.csv")
-                                        elif category == "Children's":
-                                            df_sugg = pd.read_csv("data/kids.csv")
-
-                                        # Extract relevant details (image_url, price)
-                                        item_details = df_sugg.iloc[item_idx]
-                                        image_url = item_details['image_url']
-                                        price = item_details['price']
-
-                                        details.append((image_url, price))
-
-                                    return details
+                                df = pd.merge(ratings,items, on='name',how='inner')
                                 
-                                def display_recommendations_grid(details):
-                                    for image_url, price in details:
-                                        st.image(image_url, caption=f'Price: ${price}', use_column_width=True)
-                                                                                                
-                                data = view_purchase_history(username)
 
-                                user_items = preprocess_data(data)
-                                similarity_matrix, item_to_index,user_item_matrix = build_recommendation_model(user_items)
+                                agg_ratings = df.groupby('name').agg(mean_rating = ('Rating','mean'),number_of_ratings = ('Rating','count')).reset_index()
                                 
+
+                                df_GT10 = pd.merge(df, agg_ratings[['name']], on='name', how='inner')
+                                df_GT10['Rating'] = pd.to_numeric(df_GT10['Rating'], errors='coerce')
                                 
-                                # Get recommendations for a user
-                                recommendations = get_recommendations(username, user_items, similarity_matrix, item_to_index,user_item_matrix)
+                                #visualization 
+                                #sns_plot = sns.jointplot(x='mean_rating', y='number_of_ratings', data=agg_ratings)
+                                #st.pyplot(sns_plot.fig)
+
+                                import io
+                                buffer = io.StringIO()
+                                agg_ratings.info(buf=buffer)
+                                s = buffer.getvalue()
+                                #st.text(s)
+
+                                #Create matrix
+                                matrix = df_GT10.pivot_table(index='UserID', columns='name', values='Rating')
+                                #st.write(matrix.head())
+
+                                #Normalization
+                                matrix_norm = matrix
+                                #st.write(matrix_norm.head())
+
+                                # User similarity matrix using Pearson correlation
+                                user_similarity = matrix_norm.T.corr()
+
+                                # User similarity matrix using cosine similarity
+                                user_similarity_cosine = cosine_similarity(matrix_norm.fillna(0))
+
+                                picked_userid = getUserId(username)
+                                user_similarity.drop(index=picked_userid, inplace=True)
+
+                                # Take a look at the data
+                                #st.write(user_similarity.head(100))
+
+                                # Number of similar users
+                                n = 10
+
+                                # User similarity threashold
+                                user_similarity_threshold = 0.3
+
+                                # Get top n similar users
+                                similar_users = user_similarity[user_similarity[picked_userid] > user_similarity_threshold][picked_userid].sort_values(ascending=False)[:n]
                                 
-        
-                                # Step 5: Get recommendation item details
-                                details = get_recommendation_details(recommendations)
-
-                                # Step 6: Display recommendations in grid pattern
-                                st.title(f"Recommended Items for {username}")
-                                display_recommendations_grid(details)
-
-                                def display_matrix(matrix):
-                                    for row in matrix:
-                                        print(row)
-
-                                # Assuming user_item_matrix is defined
-                                display_matrix(user_item_matrix)
 
 
-                            else:
-                                st.write("Error.")
+                                # Print out top n similar users
+                                #st.write(f'The similar users for user {picked_userid} are', similar_users)
 
- 
+                                # Items that the target user has purchsed 
+                                picked_userid_purchsed = matrix_norm[matrix_norm.index == picked_userid].dropna(axis=1, how='all')
+                                
+                                # Items that similar users purchsed
+                                similar_user_items = matrix_norm[matrix_norm.index.isin(similar_users.index)].dropna(axis=1, how='all')
+                                
+                                # Remove the purchased items from suggestions
+                                similar_user_items.drop(picked_userid_purchsed.columns,axis=1, inplace=True, errors='ignore')
+
+                                # A dictionary to store item scores
+                                item_score = {}
+
+                                # Loop through items
+                                for i in similar_user_items.columns:
+                                    # Get the ratings for movie i
+                                    item_rating = similar_user_items[i]
+                                    # Create a variable to store the score
+                                    total = 0
+                                    # Create a variable to store the number of scores
+                                    count = 0
+                                    # Loop through similar users
+                                    for u in similar_users.index:
+                                        # If the movie has rating
+                                        if pd.isna(item_rating[u]) == False:
+                                            # Score is the sum of user similarity score multiply by the movie rating
+                                            score = similar_users[u] * item_rating[u]
+                                            # Add the score to the total score for the movie so far
+                                            total += score
+                                            # Add 1 to the count
+                                            count +=1
+                                    # Get the average score for the item
+                                    item_score[i] = total / count
+
+                                # Convert dictionary to pandas dataframe
+                                item_score = pd.DataFrame(item_score.items(), columns=['name', 'item_score'])
+                                    
+                                # Sort the movies by score
+                                ranked_item_score = item_score.sort_values(by='item_score', ascending=False)
+
+                                # Select top m movies
+                                m = 10
+                                suggestions = ranked_item_score.head(m)
+
+                                no_of_col = 4
+                                recommend_count = suggestions.shape[0]
+
+                                for i in range(0, recommend_count, no_of_col):
+                                    j = min(i + no_of_col, recommend_count)
+                                    items_in_row = suggestions[i:j]  # Assuming suggestions is a DataFrame
+
+                                    cols = st.columns(no_of_col)
+                                    for col_index, (_, row) in enumerate(items_in_row.iterrows()):
+                                        with cols[col_index]:
+                                            item_name = row['name']
+                                            item_image = get_item_img(item_name)
+
+                                            if item_image is not None and item_image[0] is not None:
+                                                st.image(
+                                                    item_image[0],
+                                                    caption=f"{item_name[:37] + '...' if len(item_name) > 15 else item_name}",
+                                                    use_column_width=True
+                                                )
+
+                                            if st.button(f"View", key=f"view_button_{i}_{col_index}"):  # Use a unique key
+                                                item_details = get_item_details(item_name)
+                                                st.session_state.session_state['selected_item'] = {
+                                                    'name': item_name,
+                                                    'image': item_image[0],
+                                                    'price': item_details[0],
+                                                    'brand': item_details[1],
+                                                    'color1': item_details[2],
+                                                    'color2': item_details[3]
+                                                }
+                                # Check if any item details have been saved in session_state
+                                if 'selected_item' in st.session_state.session_state:
+                                    st.header("Selected Item Details")
+                                    selected_item = st.session_state.session_state['selected_item']
+                                    col1, col2 = st.columns([2, 3])  
+                                
+                                    col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
+
+                                    col2.markdown(f"**<span style=' font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
+                                    col2.markdown(f"<span style=' font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
+                                    col2.markdown(f"<span style=' font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
+                                    col2.markdown(f"<span style=' font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
+                                    col2.markdown(f"<span style='margin: 40px;'>  </span>" , unsafe_allow_html=True)
+                                    quantity = col2.number_input('Quantity', min_value=1, value=1, )
+                                    total_price = selected_item['price'] * quantity
                             
-                            
-
-                            st.header("Selected Item Details")
-
-                            # Check if any item details have been saved in session_state
-                            if 'selected_item' in st.session_state.session_state:
-                                selected_item = st.session_state.session_state['selected_item']
-                                col1, col2 = st.columns([2, 3])  
-                               
-                                col1.image(selected_item['image'], caption=selected_item['name'], use_column_width=True)
-
-                                col2.markdown(f"**<span style=' font-size: 25px;'>{selected_item['name']}** </span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style=' font-size: 18px;'>**Brand:** {selected_item['brand']}</span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style=' font-size: 18px;'>**Price:** $ {selected_item['price']}</span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style=' font-size: 18px;'>**Available colors:** {selected_item['color1']}, {selected_item['color2']} </span>", unsafe_allow_html=True)
-                                col2.markdown(f"<span style='margin: 40px;'>  </span>" , unsafe_allow_html=True)
-                                quantity = col2.number_input('Quantity', min_value=1, value=1, )
-                                total_price = selected_item['price'] * quantity
-                               
-                                if col2.button("Add to cart"):
-                                    add_item_cart(username,cleaned_string,selected_item['name'],selected_item['price'],total_price,quantity )
-
                                 
                             else:
                                 st.write("No item selected. Click 'View' on an item to see its details.")
-                        
-                            #convert data types
 
-
-                             
 
                     elif user_type == "Admin":
                         st.subheader("Logged In")
                         st.success("Logged In as Admin :: {}".format(username))
-                        task = st.selectbox("Welcome,Choose what to do",['Add Item','View Added Item','Update Item','Delete Item','Report','Sales Forecast', 'Place Order', 'Order Delivery'])
+                        task = st.selectbox("Welcome,Choose what to do",['Manage Items','Report','Sales Forecast'])
 
-                        if task == "Add Item":
-                             st.subheader("Add Desired Item")
-
-                             col1,col2 = st.columns(2)
-
-                             with col1:
-                                  item_category = st.selectbox("Choose category",['Men','Women'])
-                                  item_sub_category = st.text_input("Sub category")
-                                  item_name = st.text_input("Item Name")
-                                  item_price = st.number_input("Item Price",min_value=1.0)
-                                  item_discount = st.slider("Item Discount",min_value=0,max_value=100)
-                                  item_quantity = st.number_input("Item Quantity",min_value=1)
-
-                             with col2:
-                                  item_brand = st.text_input("Item Brand")
-                                  item_color_varient_1 = st.text_input("Colour Varient 1")
-                                  item_color_varient_2 = st.text_input("Colour Varient 2")
-                                  item_image = st.text_area("Image Link")
-                            
-                             if st.button("Add Item"):
-                                #   create_item_table()
-                                #   add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,item_quantity,
-                                #                 0,"True",item_brand,item_color_varient_1,item_color_varient_2,item_image)
-                                #   st.success("Item {}'s {} added sucessfully".format(item_category,item_sub_category))
-                                if (
-                                    not item_category
-                                    or not item_sub_category
-                                    or not item_name
-                                    or not item_price
-                                    or not item_discount
-                                    or not item_quantity
-                                    or not item_brand
-                                    or not item_color_varient_1
-                                    or not item_color_varient_2
-                                    or not item_image
-                                ):
-                                    st.warning("Please fill in all required fields.")
-                                else:
-                                    create_item_table()
-                                    add_item_data(
-                                        item_category,
-                                        item_sub_category,
-                                        item_name,
-                                        item_price,
-                                        item_discount,
-                                        item_quantity,
-                                        0,
-                                        "True",
-                                        item_brand,
-                                        item_color_varient_1,
-                                        item_color_varient_2,
-                                        item_image,
-                                    )
-                                    st.success("Item {}'s {} added successfully".format(item_category, item_sub_category))
-
-
-
-                        elif task == "View Added Item":
-                             st.subheader("View added item")
-                             item_data = view_all_inventry_items_ordered_by_insertion()
-                             df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                        if task == "Manage Items":
+                            manager = st.selectbox("Choose ",['Add Item','View Added Item','Update Item','Delete Item'])
                              
-                             num_items = len(df)
-                             items_per_row = 4
+                            if manager == "Add Item":
+                                st.subheader("Add Desired Item")
 
-                             for start_index in range(0, num_items, items_per_row):
-                                end_index = min(start_index + items_per_row, num_items)
-                                items_in_current_row = df[start_index:end_index]
+                                col1,col2 = st.columns(2)
 
-                                cols = st.columns(4)
+                                with col1:
+                                    item_category = st.selectbox("Choose category",['Men','Women'])
+                                    item_sub_category = st.text_input("Sub category")
+                                    item_name = st.text_input("Item Name")
+                                    item_price = st.number_input("Item Price",min_value=1.0)
+                                    item_discount = st.slider("Item Discount",min_value=0,max_value=100)
+                                    item_quantity = st.number_input("Item Quantity",min_value=1)
 
-                                for index, row in items_in_current_row.iterrows():
-                                    with cols[index % 4]:
-                                        caption_text = f"{row['category']} - {row['subcategory']} - {row['name']}"
-                                        st.image(row['image_url'], caption=caption_text, use_column_width=True)
-
-
-
-
-                        elif task == "Update Item":
-                             st.subheader("Update items")
-
-                             result = view_all_inventry_items_ordered_by_insertion()
-                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
-                             with st.expander("Current Data"):
-                                st.dataframe(df)
-
-                             list_of_item = [i[0] for i in view_unique_item()]
-                             selected_item = st.selectbox("Items to Edit",list_of_item)
-
-                             selected_result = get_item(selected_item)
-
-                             if selected_result:
-                                  get_category = selected_result[0][0]
-                                  get_subcategory = selected_result[0][1]
-                                  get_name = selected_result[0][2]
-                                  get_price = selected_result[0][3]
-                                  get_discount = selected_result[0][4]
-                                  get_quantity = selected_result[0][5]
-                                  get_isnew = selected_result[0][7]
-                                  get_brand = selected_result[0][8]
-                                  get_colour1 = selected_result[0][9]
-                                  get_colour2 = selected_result[0][10]
-                                  get_url = selected_result[0][11]
-
-                             col1,col2 = st.columns(2)
-
-                             with col1:
-                                  newitem_category = st.selectbox(get_category,['Men','Women'])
-                                  newitem_sub_category = st.text_input("Sub category",get_subcategory)
-                                  newitem_name = st.text_input("Item Name",get_name)
-                                  newitem_price = st.number_input("Item Price",min_value=0.0,value=get_price)
-                                  newitem_discount = st.slider("Item Discount", 0, 100, get_discount)
-                                  newitem_quantity = st.number_input("Item Quantity",min_value=0,value=get_quantity)
-
-                             with col2:
-                                  newitem_isnew = st.selectbox(get_isnew,['True','False'])
-                                  newitem_brand = st.text_input("Item Brand",get_brand)
-                                  newitem_color_varient_1 = st.text_input("Colour Varient 1",get_colour1)
-                                  newitem_color_varient_2 = st.text_input("Colour Varient 2",get_colour2)
-                                  newitem_image = st.text_area("Image Link",get_url)
-
-                             if st.button("Update Item"):
-                                if (
-                                    not newitem_category
-                                    or not newitem_sub_category
-                                    or not newitem_name
-                                    or not newitem_price
-                                    or not newitem_discount
-                                    or not newitem_quantity
-                                    or not newitem_isnew
-                                    or not newitem_brand
-                                    or not newitem_color_varient_1
-                                    or not newitem_color_varient_2
-                                    or not newitem_image
-                                ):
-                                    st.warning("Please fill in all required fields.")
-                                else:
-                                    edit_item(
-                                        newitem_category,
-                                        newitem_sub_category,
-                                        newitem_name,
-                                        newitem_price,
-                                        newitem_discount,
-                                        newitem_quantity,
-                                        newitem_isnew,
-                                        newitem_brand,
-                                        newitem_color_varient_1,
-                                        newitem_color_varient_2,
-                                        newitem_image,
-                                        get_category,
-                                        get_subcategory,
-                                        get_name,
-                                        get_price,
-                                        get_discount,
-                                        get_isnew,
-                                        get_brand,
-                                        get_colour1,
-                                        get_colour2,
-                                        get_url,
-                                    )
-                                    st.success("Successfully Updated {}".format(newitem_name))
-
-                             result2 = view_all_inventry_items_ordered_by_insertion()
-                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
-                             with st.expander("Updated Data"):
-                                st.dataframe(df2)
-
-                             
-
-
-
-                        elif task == "Delete Item":
-                             st.subheader("Delete items")
-
-                             result = view_all_inventry_items_ordered_by_insertion()
-                             df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
-                             with st.expander("Current Data"):
-                                st.dataframe(df)
-
-                             list_of_item = [i[0] for i in view_unique_item()]
-
-                             selected_item = st.selectbox("Items to Delete",list_of_item)
-
-                             st.warning("Do you want to delete {} ".format(selected_item))
-                             if st.button("Delete Task"):
-                                delete_item(selected_item)
-                                st.success("Task has been sucessfully deleted")
-
-                             result2 = view_all_inventry_items_ordered_by_insertion()
-                             df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
-                             with st.expander("New Data"):
-                                st.dataframe(df2)
-
+                                with col2:
+                                    item_brand = st.text_input("Item Brand")
+                                    item_color_varient_1 = st.text_input("Colour Varient 1")
+                                    item_color_varient_2 = st.text_input("Colour Varient 2")
+                                    item_image = st.text_area("Image Link")
                                 
+                                if st.button("Add Item"):
+                                    #   create_item_table()
+                                    #   add_item_data(item_category,item_sub_category,item_name,item_price,item_discount,item_quantity,
+                                    #                 0,"True",item_brand,item_color_varient_1,item_color_varient_2,item_image)
+                                    #   st.success("Item {}'s {} added sucessfully".format(item_category,item_sub_category))
+                                    if (
+                                        not item_category
+                                        or not item_sub_category
+                                        or not item_name
+                                        or not item_price
+                                        or not item_discount
+                                        or not item_quantity
+                                        or not item_brand
+                                        or not item_color_varient_1
+                                        or not item_color_varient_2
+                                        or not item_image
+                                    ):
+                                        st.warning("Please fill in all required fields.")
+                                    else:
+                                        create_item_table()
+                                        add_item_data(
+                                            item_category,
+                                            item_sub_category,
+                                            item_name,
+                                            item_price,
+                                            item_discount,
+                                            item_quantity,
+                                            0,
+                                            "True",
+                                            item_brand,
+                                            item_color_varient_1,
+                                            item_color_varient_2,
+                                            item_image,
+                                        )
+                                        st.success("Item {}'s {} added successfully".format(item_category, item_sub_category))
+
+                            elif manager=="View Added Item":
+                                
+                                st.subheader("View added item")
+                                item_data = view_all_inventry_items_ordered_by_insertion()
+                                df = pd.DataFrame(item_data,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                                
+                                num_items = len(df)
+                                items_per_row = 4
+
+                                for start_index in range(0, num_items, items_per_row):
+                                    end_index = min(start_index + items_per_row, num_items)
+                                    items_in_current_row = df[start_index:end_index]
+
+                                    cols = st.columns(4)
+
+                                    for index, row in items_in_current_row.iterrows():
+                                        with cols[index % 4]:
+                                            caption_text = f"{row['category']} - {row['subcategory']} - {row['name']}"
+                                            st.image(row['image_url'], caption=caption_text, use_column_width=True)
+
+                            elif manager == "Update Item":
+                                st.subheader("Update items")
+
+                                result = view_all_inventry_items_ordered_by_insertion()
+                                df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                                with st.expander("Current Data"):
+                                    st.dataframe(df)
+
+                                list_of_item = [i[0] for i in view_unique_item()]
+                                selected_item = st.selectbox("Items to Edit",list_of_item)
+
+                                selected_result = get_item(selected_item)
+
+                                if selected_result:
+                                    get_category = selected_result[0][0]
+                                    get_subcategory = selected_result[0][1]
+                                    get_name = selected_result[0][2]
+                                    get_price = selected_result[0][3]
+                                    get_discount = selected_result[0][4]
+                                    get_quantity = selected_result[0][5]
+                                    get_isnew = selected_result[0][7]
+                                    get_brand = selected_result[0][8]
+                                    get_colour1 = selected_result[0][9]
+                                    get_colour2 = selected_result[0][10]
+                                    get_url = selected_result[0][11]
+
+                                col1,col2 = st.columns(2)
+
+                                with col1:
+                                    newitem_category = st.selectbox(get_category,['Men','Women'])
+                                    newitem_sub_category = st.text_input("Sub category",get_subcategory)
+                                    newitem_name = st.text_input("Item Name",get_name)
+                                    newitem_price = st.number_input("Item Price",min_value=1.0,value=get_price)
+                                    newitem_discount = st.slider("Item Discount", 0, 100, get_discount)
+                                    newitem_quantity = st.number_input("Item Quantity",min_value=1,value=get_quantity)
+
+                                with col2:
+                                    newitem_isnew = st.selectbox(get_isnew,['True','False'])
+                                    newitem_brand = st.text_input("Item Brand",get_brand)
+                                    newitem_color_varient_1 = st.text_input("Colour Varient 1",get_colour1)
+                                    newitem_color_varient_2 = st.text_input("Colour Varient 2",get_colour2)
+                                    newitem_image = st.text_area("Image Link",get_url)
+
+                                if st.button("Update Item"):
+                                    if (
+                                        not newitem_category
+                                        or not newitem_sub_category
+                                        or not newitem_name
+                                        or not newitem_price
+                                        or not newitem_discount
+                                        or not newitem_quantity
+                                        or not newitem_isnew
+                                        or not newitem_brand
+                                        or not newitem_color_varient_1
+                                        or not newitem_color_varient_2
+                                        or not newitem_image
+                                    ):
+                                        st.warning("Please fill in all required fields.")
+                                    else:
+                                        edit_item(
+                                            newitem_category,
+                                            newitem_sub_category,
+                                            newitem_name,
+                                            newitem_price,
+                                            newitem_discount,
+                                            newitem_quantity,
+                                            newitem_isnew,
+                                            newitem_brand,
+                                            newitem_color_varient_1,
+                                            newitem_color_varient_2,
+                                            newitem_image,
+                                            get_category,
+                                            get_subcategory,
+                                            get_name,
+                                            get_price,
+                                            get_discount,
+                                            get_isnew,
+                                            get_brand,
+                                            get_colour1,
+                                            get_colour2,
+                                            get_url,
+                                        )
+                                        st.success("Successfully Updated {}".format(newitem_name))
+
+                                result2 = view_all_inventry_items_ordered_by_insertion()
+                                df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                                with st.expander("Updated Data"):
+                                    st.dataframe(df2)
+
+                            elif manager == "Delete Item": 
+                                st.subheader("Delete items")
+
+                                result = view_all_inventry_items_ordered_by_insertion()
+                                df = pd.DataFrame(result,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                                with st.expander("Current Data"):
+                                    st.dataframe(df)
+
+                                list_of_item = [i[0] for i in view_unique_item()]
+
+                                selected_item = st.selectbox("Items to Delete",list_of_item)
+
+                                st.warning("Do you want to delete {} ".format(selected_item))
+                                if st.button("Delete Task"):
+                                    delete_item(selected_item)
+                                    st.success("Task has been sucessfully deleted")
+
+                                result2 = view_all_inventry_items_ordered_by_insertion()
+                                df2 = pd.DataFrame(result2,columns=["category", "subcategory", "name", "price", "discount", "quantity", "likes", "isnew", "brand", "colour1", "colour2", "image_url"])
+                                with st.expander("New Data"):
+                                    st.dataframe(df2)           
 
                         elif task == "Report":
                             st.subheader("Generate Report")
@@ -963,164 +1064,222 @@ def main():
                                 key="download_bar_chart",
                             )
 
+                            st.title('Inventory Levels')
+
+                            if st.button('Generate Report'):
+                                data = get_columns_pdf()
+                                
+                                def generate_pdf(data):
+                                    pdf_filename = 'items.pdf'
+                                    c = canvas.Canvas(pdf_filename, pagesize=letter)
+                                    c.setFont("Helvetica-Bold", 16)
+                                    c.drawString(100, 750, "Items Report")
+                                    c.setFont("Helvetica-Bold", 12)
+                                    c.drawString(100, 700, "Name")
+                                    c.drawString(350, 700, "Quantity")
+                                    c.drawString(500, 700, "Price")
+                                    c.setFont("Helvetica", 12)
+
+                                    y = 680
+                                    records_per_page = 35
+                                    page_number = 1
+
+                                    for idx, row in enumerate(data):
+                                        if idx % records_per_page == 0:
+                                            if idx > 0:
+                                                c.showPage()
+                                                page_number += 1
+                                                y = 750
+
+                                                if page_number > 1:
+                                                    c.setFont("Helvetica", 12)
+                                                    c.drawString(100, y, row[0])
+                                                    c.drawString(350, y, str(row[1]))
+                                                    c.drawString(500, y, str(row[2]))
+                                                    y -= 20
+                                            else:
+                                                continue
+
+                                        name = row[0][:32] + "..." if len(row[0]) > 32 else row[0]
+
+                                        c.drawString(100, y, name)
+                                        c.drawString(350, y, str(row[1]))
+                                        c.drawString(500, y, str(row[2]))
+                                        y -= 20
+
+                                    c.save()
+
+                                generate_pdf(data)
+
+                                st.download_button(
+                                    label="Download Report",
+                                    data=open("items.pdf", "rb").read(),
+                                    key="download-pdf",
+                                    file_name="items.pdf",
+                                )
+
 
                         elif task == "Sales Forecast":
-                            def load_data():
-                                conn = sqlite3.connect('cart.db')
-                                df = pd.read_sql('SELECT * FROM purchase_history', conn)
-                                conn.close()
-                                return df
-                            
-                            def get_item_quantity(item_name):
-                                conn = sqlite3.connect('data.db')  # Adjust the database path as needed
-                                c = conn.cursor()
 
-                                # Execute a SQL query to retrieve the quantity of the selected item
-                                c.execute("SELECT quantity FROM itemstable WHERE name = ?", (item_name,))
+                            salFor = st.selectbox("Choose ",['Sales Forecast','Place Order','Order Delivery'])
+
+                            if salFor == "Sales Forecast":
+                            
+                                def load_data():
+                                    conn = sqlite3.connect('cart.db')
+                                    df = pd.read_sql('SELECT * FROM purchase_history', conn)
+                                    conn.close()
+                                    return df
+                                
+                                def get_item_quantity(item_name):
+                                    conn = sqlite3.connect('data.db')
+                                    c = conn.cursor()
+                                    c.execute("SELECT quantity FROM itemstable WHERE name = ?", (item_name,))
+                                    quantity = c.fetchone()
+
+                                    conn.close()
+
+                                    return quantity[0] if quantity else 0
+                                
+                                
+                                def load_category_data(category):
+                                    if category == "Women's":
+                                        return 'data/women.csv'
+                                    elif category == "Men's":
+                                        return 'data/men.csv'
+                                    elif category == "Children's":
+                                        return 'data/kids.csv'
+                                    else:
+                                        return None
+
+                                def encode_item_name(df):
+                                    label_encoder = LabelEncoder()
+                                    df['item_name_encoded'] = label_encoder.fit_transform(df['item_name'])
+                                    return df
+
+                                #Extra trees regressor model
+                                def forecast_sales_for_item(df, item_name, likes_count):
+                                    item_df = df[df['item_name'] == item_name]
+                                    item_df = item_df.groupby('item_name')['quantity'].sum().reset_index()
+
+                                    X = item_df[['quantity']]
+                                    y = item_df['quantity']
+
+                                    model = ExtraTreesRegressor(n_estimators=100, random_state=0)
+                                    model.fit(X, y)
+
+                                    return model, likes_count
+                                
+                                st.title('Clothing Store Sales Forecasting')
+                                df = load_data()
+
+                                item_name = st.selectbox('Select an item for sales forecasting:', df['item_name'].unique())
+
+                                if item_name:
+                                    category = df.loc[df['item_name'] == item_name, 'category'].values[0]
+                                    category_data_file = load_category_data(category)
+
+                                    if category_data_file:
+                                        women_data = pd.read_csv(category_data_file)
+                                        likes_count = women_data.loc[women_data['name'] == item_name, 'likes_count'].values[0]
+                                        quantity_to_forecast = 2.33
+
+                                        model, likes_count = forecast_sales_for_item(df, item_name, likes_count)
+
+                                    
+                                        forecasted_total_sales = model.predict([[quantity_to_forecast]])[0] * quantity_to_forecast
+                                        item_quantity = get_item_quantity(item_name)
+                                        forecasted_total_sales += likes_count
+                                        forecasted_total_sales = math.ceil(forecasted_total_sales)
+
+                                        
+                                        st.write(f'Quantity in Inventory: {item_quantity} Units')
+
+                                        st.write(f'Total Predicted Sales: {forecasted_total_sales} Units')
+                                        if forecasted_total_sales >= item_quantity:
+                                            st.write('Status: Out of Stock')
+                                            create_order_table()
+                                            add_item_order(item_name,forecasted_total_sales)
+                                        else:
+                                            st.write('Status: In Stock')
+
+                            elif salFor == "Place Order":
+                                    
+                                    
+
+                                st.title('Place an order')
+
+                                def load_data():
+                                    conn = sqlite3.connect('cart.db')
+                                    df = pd.read_sql('SELECT * FROM purchase_history', conn)
+                                    conn.close()
+                                    return df
+
+                                df = load_data()
+
+                                search_query = st.text_input('Search by Item Name:')
+                                
+                                if search_query:
+                                    filtered_df = df[df['item_name'].str.contains(search_query, case=False)]
+                                else:
+                                    filtered_df = df
+
+                                item_name = st.selectbox('Select an item for Ordering:', filtered_df['item_name'].unique())
+
+                                item_quantity = st.number_input("Item Quantity", min_value=1)
+
+                                if st.button("Place Order"):
+                                    create_order_table()
+                                    add_item_order(item_name, item_quantity)
+                                    st.success("Order placed successfully")
+
+                            elif salFor == "Order Delivery":                                   
+
+
+                                st.title('Order Details')
+                                c.execute('SELECT DISTINCT item_name FROM ordertable')
+                                item_names = [row[0] for row in c.fetchall()]
+
+                                selected_item = st.selectbox('Select Item Name', item_names)
+
+                                c.execute('SELECT item_quantity FROM ordertable WHERE item_name=?', (selected_item,))
                                 quantity = c.fetchone()
 
-                                conn.close()
-
-                                return quantity[0] if quantity else 0
-                            
-                            # Function to load the CSV file based on category
-                            def load_category_data(category):
-                                if category == "Women's":
-                                    return 'data/women.csv'
-                                elif category == "Men's":
-                                    return 'data/men.csv'
-                                elif category == "Children's":
-                                    return 'data/kids.csv'
+                                if quantity:
+                                    st.write(f'Quantity for {selected_item}: {quantity[0]}')
                                 else:
-                                    return None
+                                    st.write(f'No quantity found for {selected_item}')
 
-                            def encode_item_name(df):
-                                label_encoder = LabelEncoder()
-                                df['item_name_encoded'] = label_encoder.fit_transform(df['item_name'])
-                                return df
+                                if st.button('Received'):
+                                    db_connection  = sqlite3.connect('data.db')
+                                    c2 = db_connection .cursor()
 
-                            # Forecast sales using a simple linear regression model for a specific item
-                            def forecast_sales_for_item(df, item_name, likes_count):
-                                item_df = df[df['item_name'] == item_name]
-                                item_df = item_df.groupby('item_name')['quantity'].sum().reset_index()
+                                    c2.execute('SELECT quantity FROM itemstable WHERE name=?', (selected_item,))
+                                    current_quantity = c2.fetchone()
 
-                                X = item_df[['quantity']]
-                                y = item_df['quantity']
+                                    if current_quantity:
+                                        new_quantity = current_quantity[0] + quantity[0]
+                                        
+                                        c2.execute('UPDATE itemstable SET quantity=? WHERE name=?', (new_quantity, selected_item))
+                                        db_connection .commit()
+                                        st.write(f'Item quantity updated successfully')
 
-                                model = ExtraTreesRegressor(n_estimators=100, random_state=0)
-                                model.fit(X, y)
-
-                                return model, likes_count
-                            
-                            st.title('Clothing Store Sales Forecasting')
-                            df = load_data()
-
-                            item_name = st.selectbox('Select an item for sales forecasting:', df['item_name'].unique())
-
-                            if item_name:
-                                # Get the category from purchase_history
-                                category = df.loc[df['item_name'] == item_name, 'category'].values[0]
-
-                                # Load the appropriate CSV data based on the category
-                                category_data_file = load_category_data(category)
-
-                                if category_data_file:
-                                    women_data = pd.read_csv(category_data_file)
-                                    likes_count = women_data.loc[women_data['name'] == item_name, 'likes_count'].values[0]
-                                    quantity_to_forecast = 2.33
-
-                                    model, likes_count = forecast_sales_for_item(df, item_name, likes_count)
-
-                                
-                                    forecasted_total_sales = model.predict([[quantity_to_forecast]])[0] * quantity_to_forecast
-                                    item_quantity = get_item_quantity(item_name)
-
-                                    # Add Likes_count to forecasted_total_sales
-                                    forecasted_total_sales += likes_count
-                                    forecasted_total_sales = math.ceil(forecasted_total_sales)
-
-                                    # Display the quantity of the selected item
-                                    st.write(f'Quantity in Inventory: {item_quantity} Units')
-                                    st.write("")
-
-                                    st.write(f'Total Predicted Sales: {forecasted_total_sales} Units')
-                                    st.write("")
-                                    if forecasted_total_sales >= item_quantity:
-                                        st.write('Status: Out of Stock')
-                                        create_order_table()
-                                        add_item_order(item_name,forecasted_total_sales)
+                                        c.execute('DELETE FROM ordertable WHERE item_name=?', (selected_item,))
+                                        db_connection .commit()
+                                        st.write(f'Record for {selected_item} has been removed from the order table.')
                                     else:
-                                        st.write('Status: In Stock')
-                             
-                        elif task == "Place Order":
-                            st.title('Place an order')
-                            def load_data():
-                                conn = sqlite3.connect('cart.db')
-                                df = pd.read_sql('SELECT * FROM purchase_history', conn)
-                                conn.close()
-                                return df
-                            
-                            df = load_data()
-                            item_name = st.selectbox('Select an item for sales forecasting:', df['item_name'].unique())
+                                        st.write(f'No item named {selected_item} found in itemstable')
 
-                            item_quantity = st.number_input("Item Quantity",min_value=1)
-
-                            if st.button("Place Order"):
-                                create_order_table()
-                                add_item_order(item_name,item_quantity)
-                                st.success("Order placed successfully")
-
-                        elif task == "Order Delivery":
-                            st.title('Order Details')
-
-                            # Get a list of unique item names from the database
-                            c.execute('SELECT DISTINCT item_name FROM ordertable')
-                            item_names = [row[0] for row in c.fetchall()]
-
-                            # Create a dropdown to select item_name
-                            selected_item = st.selectbox('Select Item Name', item_names)
-
-                            # Query the database for the quantity of the selected item
-                            c.execute('SELECT item_quantity FROM ordertable WHERE item_name=?', (selected_item,))
-                            quantity = c.fetchone()
-
-                            # Display the quantity
-                            if quantity:
-                                st.write(f'Quantity for {selected_item}: {quantity[0]}')
-                            else:
-                                st.write(f'No quantity found for {selected_item}')
-
-                            # Add a "Received" button
-                            if st.button('Received'):
-                                db_connection  = sqlite3.connect('data.db')
-                                c2 = db_connection .cursor()  # Use a different variable name here, like c2
-
-                                c2.execute('SELECT quantity FROM itemstable WHERE name=?', (selected_item,))
-                                current_quantity = c2.fetchone()
-
-                                if current_quantity:
-                                    # Calculate the new quantity by adding the received quantity
-                                    new_quantity = current_quantity[0] + quantity[0]
-
-                                    # Update the item_quantity in itemstable
-                                    c2.execute('UPDATE itemstable SET quantity=? WHERE name=?', (new_quantity, selected_item))
-                                    db_connection .commit()
-                                    st.write(f'Item quantity updated successfully')
-
-                                    c.execute('DELETE FROM ordertable WHERE item_name=?', (selected_item,))
-                                    db_connection .commit()
-                                    st.write(f'Record for {selected_item} has been removed from the order table.')
-                                else:
-                                    st.write(f'No item named {selected_item} found in itemstable')
-                                    
+                                        
+                        else:
+                            st.error("Unknown user type")
                     else:
-                        st.error("Unknown user type")
+                        st.error("Failed to retrieve user type")
                 else:
-                    st.error("Failed to retrieve user type")
-            else:
-                st.error("Login failed. Please check your credentials.")
+                    st.error("Login failed. Please check your credentials.")
 
-        
+      
 
 if __name__ == '__main__':
     main()
+    
